@@ -1,0 +1,8 @@
+{
+  "name": "GATE Prep",
+  "description": "Personal GATE CSE preparation management dashboard for Learning, Revision, PYQs, and Subject Calendar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
