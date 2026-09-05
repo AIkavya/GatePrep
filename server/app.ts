@@ -5,13 +5,13 @@ import {
   handleMe,
   authMiddleware,
   AuthRequest,
-} from './auth';
+} from './auth.js';
 import {
   getUserStudyData,
   saveUserStudyData,
   resetUserStudyData,
-} from './db';
-import { getInitialSeedData } from '../src/data/seedData';
+} from './db.js';
+import { getInitialSeedData } from '../src/data/seedData.js';
 
 export const app = express();
 

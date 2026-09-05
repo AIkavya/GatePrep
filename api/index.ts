@@ -1,4 +1,4 @@
-import { app } from '../server/app';
+import { app } from '../server/app.js';
 
 export default function handler(req: any, res: any) {
   // If Vercel rewrote the path to /api/index.ts, restore original URL so Express routes match correctly

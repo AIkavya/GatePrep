@@ -1,5 +1,5 @@
 import { Subject, Chapter, Revision, PYQ, CalendarEvent, RevisionSettings, PyqQueueItem, Exam } from '../types';
-import { getTodayDateString, addDays } from '../utils/dateUtils';
+import { getTodayDateString, addDays } from '../utils/dateUtils.js';
 
 export const DEFAULT_REVISION_SETTINGS: RevisionSettings = {
   rev1Days: 7,

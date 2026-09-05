@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { findUserByUsername, findUserById, insertUser } from './db';
+import { findUserByUsername, findUserById, insertUser } from './db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gate-prep-super-secret-jwt-key-2026';
 
