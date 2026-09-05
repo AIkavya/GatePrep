@@ -162,21 +162,22 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userCacheKey = `gate_prep_user_data_${user.id}`;
 
     async function loadData() {
+      let cachedParsed: any = null;
       try {
         // Fast optimistic cache read
         const cached = localStorage.getItem(userCacheKey);
         if (cached) {
           try {
-            const parsed = JSON.parse(cached);
-            if (isMounted) {
-              setSubjects(parsed.subjects || []);
-              setChapters(parsed.chapters || []);
-              setRevisions(parsed.revisions || []);
-              setPyqs(parsed.pyqs || []);
-              setPyqQueue(parsed.pyqQueue || []);
-              setCalendarEvents(parsed.calendarEvents || []);
-              setExams(parsed.exams || []);
-              if (parsed.revisionSettings) setRevisionSettings(parsed.revisionSettings);
+            cachedParsed = JSON.parse(cached);
+            if (isMounted && cachedParsed) {
+              setSubjects(cachedParsed.subjects || []);
+              setChapters(cachedParsed.chapters || []);
+              setRevisions(cachedParsed.revisions || []);
+              setPyqs(cachedParsed.pyqs || []);
+              setPyqQueue(cachedParsed.pyqQueue || []);
+              setCalendarEvents(cachedParsed.calendarEvents || []);
+              setExams(cachedParsed.exams || []);
+              if (cachedParsed.revisionSettings) setRevisionSettings(cachedParsed.revisionSettings);
             }
           } catch (e) {
             console.warn('Failed parsing cached study data');
@@ -190,22 +191,61 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        // Fetch authoritative study data from server database
+        // Fetch study data from server database
         const remoteData = await api.study.getData();
         if (isMounted && remoteData) {
-          // If the user is fresh/never used before, remoteData contains empty arrays!
-          setSubjects(remoteData.subjects || []);
-          setChapters(remoteData.chapters || []);
-          setRevisions(remoteData.revisions || []);
-          setPyqs(remoteData.pyqs || []);
-          setPyqQueue(remoteData.pyqQueue || []);
-          setCalendarEvents(remoteData.calendarEvents || []);
-          setExams(remoteData.exams || []);
-          if (remoteData.revisionSettings) {
-            setRevisionSettings(remoteData.revisionSettings);
+          const isRemoteEmpty =
+            (!remoteData.subjects || remoteData.subjects.length === 0) &&
+            (!remoteData.chapters || remoteData.chapters.length === 0) &&
+            (!remoteData.revisions || remoteData.revisions.length === 0);
+
+          const isCachedNotEmpty =
+            cachedParsed &&
+            ((cachedParsed.subjects && cachedParsed.subjects.length > 0) ||
+              (cachedParsed.chapters && cachedParsed.chapters.length > 0) ||
+              (cachedParsed.revisions && cachedParsed.revisions.length > 0));
+
+          if (isRemoteEmpty && isCachedNotEmpty) {
+            // Server database was reset on Vercel restart - restore client cached study data and re-sync to server
+            setSubjects(cachedParsed.subjects || []);
+            setChapters(cachedParsed.chapters || []);
+            setRevisions(cachedParsed.revisions || []);
+            setPyqs(cachedParsed.pyqs || []);
+            setPyqQueue(cachedParsed.pyqQueue || []);
+            setCalendarEvents(cachedParsed.calendarEvents || []);
+            setExams(cachedParsed.exams || []);
+            if (cachedParsed.revisionSettings) {
+              setRevisionSettings(cachedParsed.revisionSettings);
+            }
+
+            api.study
+              .saveData({
+                subjects: cachedParsed.subjects || [],
+                chapters: cachedParsed.chapters || [],
+                revisions: cachedParsed.revisions || [],
+                pyqs: cachedParsed.pyqs || [],
+                pyqQueue: cachedParsed.pyqQueue || [],
+                calendarEvents: cachedParsed.calendarEvents || [],
+                exams: cachedParsed.exams || [],
+                revisionSettings: cachedParsed.revisionSettings || DEFAULT_REVISION_SETTINGS,
+              })
+              .catch((err) => console.warn('Re-syncing cached data to server failed:', err));
+          } else {
+            // Use server data
+            setSubjects(remoteData.subjects || []);
+            setChapters(remoteData.chapters || []);
+            setRevisions(remoteData.revisions || []);
+            setPyqs(remoteData.pyqs || []);
+            setPyqQueue(remoteData.pyqQueue || []);
+            setCalendarEvents(remoteData.calendarEvents || []);
+            setExams(remoteData.exams || []);
+            if (remoteData.revisionSettings) {
+              setRevisionSettings(remoteData.revisionSettings);
+            }
+
+            localStorage.setItem(userCacheKey, JSON.stringify(remoteData));
           }
 
-          localStorage.setItem(userCacheKey, JSON.stringify(remoteData));
           setSyncStatus('synced');
         }
       } catch (err) {
