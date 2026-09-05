@@ -40,6 +40,8 @@ export const SubjectsPage: React.FC = () => {
     getSubjectEntirePyqCount,
     getSubjectTestsCount,
     addChapter,
+    updateChapter,
+    deleteChapter,
     updateChapterMetrics,
     updateChapterProgress,
     setSelectedSubjectId,
@@ -66,6 +68,7 @@ export const SubjectsPage: React.FC = () => {
 
   // Chapter Details & Counters Modal (When clicking a chapter tab/row)
   const [selectedChapterForDetails, setSelectedChapterForDetails] = useState<Chapter | null>(null);
+  const [editingChapterName, setEditingChapterName] = useState<string>('');
   const [editingRevCount, setEditingRevCount] = useState<number>(0);
   const [editingPyqSolvedCount, setEditingPyqSolvedCount] = useState<number>(0);
   const [editingPyqFullCyclesCount, setEditingPyqFullCyclesCount] = useState<number>(0);
@@ -169,6 +172,7 @@ export const SubjectsPage: React.FC = () => {
 
   const handleOpenChapterDetails = (chap: Chapter) => {
     setSelectedChapterForDetails(chap);
+    setEditingChapterName(chap.name);
     const revCount = getChapterRevisionCount(chap.id);
     const pyqStats = getChapterPyqStats(chap.id);
     setEditingRevCount(revCount);
@@ -178,16 +182,24 @@ export const SubjectsPage: React.FC = () => {
 
   const handleSaveChapterMetrics = () => {
     if (!selectedChapterForDetails) return;
+
+    const trimmedName = editingChapterName.trim();
+    if (trimmedName && trimmedName !== selectedChapterForDetails.name) {
+      updateChapter(selectedChapterForDetails.id, { name: trimmedName });
+    }
+
     updateChapterMetrics(selectedChapterForDetails.id, {
       revisionCount: editingRevCount,
       pyqsSolvedCount: editingPyqSolvedCount,
       pyqFullCyclesCount: editingPyqFullCyclesCount,
     });
+
     // Update local copy
     setSelectedChapterForDetails((prev) =>
       prev
         ? {
             ...prev,
+            name: trimmedName || prev.name,
             revisionCount: editingRevCount,
             pyqsSolvedCount: editingPyqSolvedCount,
             pyqFullCyclesCount: editingPyqFullCyclesCount,
@@ -370,8 +382,8 @@ export const SubjectsPage: React.FC = () => {
                           className="p-2.5 rounded-xl bg-[#f5f5f7] dark:bg-[#1d1d1f] hover:bg-blue-50/50 dark:hover:bg-blue-950/30 border border-[#e5e5ea] dark:border-[#333336] hover:border-blue-300 dark:hover:border-blue-800/60 transition-all cursor-pointer group"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="truncate pr-2">
-                              <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#0071e3] dark:group-hover:text-[#2997ff] transition-colors text-xs">
+                            <div className="truncate pr-2 min-w-0 flex-1">
+                              <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#0071e3] dark:group-hover:text-[#2997ff] transition-colors text-xs block truncate">
                                 {chap.name}
                               </span>
                               <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px]">
@@ -380,7 +392,37 @@ export const SubjectsPage: React.FC = () => {
                                 <span className="text-[#1d1d1f] dark:text-[#f5f5f7] font-medium">{chap.progress}% learned</span>
                               </div>
                             </div>
-                            <StatusBadge status={chap.status} />
+                            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <StatusBadge status={chap.status} />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenChapterDetails(chap);
+                                }}
+                                className="p-1 text-[#86868b] hover:text-[#0071e3] dark:hover:text-[#2997ff] hover:bg-white dark:hover:bg-[#2c2c2e] rounded-full transition-colors"
+                                title="Edit Chapter Name & Metrics"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (
+                                    window.confirm(
+                                      `Delete chapter "${chap.name}"? This will also remove any associated revisions and PYQs.`
+                                    )
+                                  ) {
+                                    deleteChapter(chap.id);
+                                  }
+                                }}
+                                className="p-1 text-[#86868b] hover:text-[#ff3b30] dark:hover:text-[#ff453a] hover:bg-red-50 dark:hover:bg-red-950/40 rounded-full transition-colors"
+                                title="Delete Chapter"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
 
                           {/* Chapter Metric Badges */}
@@ -424,6 +466,21 @@ export const SubjectsPage: React.FC = () => {
           }`}
         >
           <div className="space-y-5">
+            {/* Chapter Name Input */}
+            <div>
+              <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+                Chapter / Topic Name
+              </label>
+              <input
+                type="text"
+                value={editingChapterName}
+                onChange={(e) => setEditingChapterName(e.target.value)}
+                className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-[#0071e3] focus:outline-none"
+                placeholder="Enter chapter name"
+                required
+              />
+            </div>
+
             {/* Chapter Learning Status & Progress Header */}
             <div className="p-3 bg-[#f5f5f7] dark:bg-[#1d1d1f] rounded-xl border border-[#e5e5ea] dark:border-[#333336] flex items-center justify-between">
               <div>
@@ -610,9 +667,27 @@ export const SubjectsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Navigation and Save Actions */}
+            {/* Navigation, Delete and Save Actions */}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#e5e5ea] dark:border-[#333336]">
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Are you sure you want to delete chapter "${selectedChapterForDetails.name}"? This will also remove associated revisions and PYQs.`
+                      )
+                    ) {
+                      deleteChapter(selectedChapterForDetails.id);
+                      setSelectedChapterForDetails(null);
+                    }
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold text-[#ff3b30] hover:bg-red-50 dark:hover:bg-red-950/40 rounded-full border border-red-200 dark:border-red-900/60 flex items-center gap-1 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Chapter</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -622,18 +697,7 @@ export const SubjectsPage: React.FC = () => {
                   }}
                   className="px-3.5 py-1.5 text-xs font-semibold bg-[#f5f5f7] dark:bg-[#2c2c2e] hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-full border border-[#e5e5ea] dark:border-[#3a3a3c] transition-colors"
                 >
-                  Open in Learning
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedSubjectId(selectedChapterForDetails.subjectId);
-                    setSelectedChapterForDetails(null);
-                    setActiveTab('pyq');
-                  }}
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-[#0071e3] dark:text-[#2997ff] rounded-full border border-blue-200/70 dark:border-blue-800/60 transition-colors"
-                >
-                  Open in PYQ
+                  Study
                 </button>
               </div>
 
@@ -643,7 +707,7 @@ export const SubjectsPage: React.FC = () => {
                   onClick={() => setSelectedChapterForDetails(null)}
                   className="px-4 py-1.5 text-xs font-semibold text-[#86868b] dark:text-[#a1a1a6] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e] rounded-full"
                 >
-                  Close
+                  Cancel
                 </button>
                 <button
                   type="button"
@@ -655,7 +719,7 @@ export const SubjectsPage: React.FC = () => {
                   className="px-4 py-1.5 text-xs font-semibold text-white dark:text-black bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff] rounded-full shadow-xs flex items-center gap-1.5"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  <span>Save Counts</span>
+                  <span>Save Changes</span>
                 </button>
               </div>
             </div>
