@@ -51,15 +51,29 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(endpoint, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      ...options,
+      headers,
+    });
+  } catch (networkErr: any) {
+    throw new Error('Network connection failed. Please check your connection or server status.');
+  }
 
-  const data = await response.json().catch(() => ({}));
+  let data: any = {};
+  const responseText = await response.text();
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = { error: responseText.slice(0, 150) };
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || `HTTP ${response.status}: Failed to execute request`);
+    const errorMsg = data.error || data.message || `Server error (${response.status})`;
+    throw new Error(errorMsg);
   }
 
   return data as T;

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Lock, User, Eye, EyeOff, ShieldCheck, Database, Layers, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export const AuthScreen: React.FC = () => {
-  const { login, register, error } = useAuth();
+  const { login, register, continueAsGuest, error } = useAuth();
   const [isSignUp, setIsSignUp] = useState<boolean>(false);
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -63,8 +63,9 @@ export const AuthScreen: React.FC = () => {
       } catch {
         await register(demoUser, demoPass);
       }
-    } catch (err: any) {
-      setLocalError(err.message || 'Demo sign in failed.');
+    } catch {
+      // If server is unreachable or offline, smoothly continue in offline mode
+      continueAsGuest();
     } finally {
       setSubmitting(false);
     }
@@ -136,8 +137,15 @@ export const AuthScreen: React.FC = () => {
 
           {/* Error Alert */}
           {displayError && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200/80 dark:border-red-900/40 text-xs text-[#ff3b30] dark:text-[#ff453a]">
-              {displayError}
+            <div className="mb-5 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200/80 dark:border-red-900/40 text-xs text-[#ff3b30] dark:text-[#ff453a] space-y-2">
+              <div>{displayError}</div>
+              <button
+                type="button"
+                onClick={continueAsGuest}
+                className="inline-flex items-center gap-1.5 font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                <span>⚡ Continue in Guest / Offline Mode</span>
+              </button>
             </div>
           )}
 
@@ -210,16 +218,28 @@ export const AuthScreen: React.FC = () => {
           </form>
 
           {/* Quick Demo Login Option */}
-          <div className="mt-5 pt-5 border-t border-[#e5e5ea] dark:border-[#333336] text-center">
-            <button
-              id="btn-quick-demo"
-              type="button"
-              onClick={handleQuickDemo}
-              disabled={submitting}
-              className="text-xs font-semibold text-[#86868b] dark:text-[#a1a1a6] hover:text-[#0071e3] dark:hover:text-[#2997ff] transition-colors underline underline-offset-4"
-            >
-              Or click here for quick 1-click login as Demo User
-            </button>
+          <div className="mt-5 pt-5 border-t border-[#e5e5ea] dark:border-[#333336] text-center space-y-2">
+            <div>
+              <button
+                id="btn-quick-demo"
+                type="button"
+                onClick={handleQuickDemo}
+                disabled={submitting}
+                className="text-xs font-semibold text-[#86868b] dark:text-[#a1a1a6] hover:text-[#0071e3] dark:hover:text-[#2997ff] transition-colors underline underline-offset-4 cursor-pointer"
+              >
+                Or click here for 1-click Demo Sign In
+              </button>
+            </div>
+            <div>
+              <button
+                id="btn-guest-mode"
+                type="button"
+                onClick={continueAsGuest}
+                className="text-xs text-[#86868b] hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              >
+                ⚡ Or continue immediately as Guest (Local Offline Mode)
+              </button>
+            </div>
           </div>
         </div>
 

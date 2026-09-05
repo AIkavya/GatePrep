@@ -183,7 +183,14 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        // Fetch authoritative study data from server SQLite database
+        // For guest aspirant or offline mode, local optimistic cache is sufficient
+        if (user.id === 'guest_aspirant') {
+          setIsInitialized(true);
+          setSyncStatus('synced');
+          return;
+        }
+
+        // Fetch authoritative study data from server database
         const remoteData = await api.study.getData();
         if (isMounted && remoteData) {
           // If the user is fresh/never used before, remoteData contains empty arrays!
@@ -264,11 +271,15 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     saveTimerRef.current = setTimeout(async () => {
+      if (user.id === 'guest_aspirant') {
+        setSyncStatus('synced');
+        return;
+      }
       try {
         await api.study.saveData(dataToSave);
         setSyncStatus('synced');
       } catch (e) {
-        console.error('Failed to sync changes to SQLite database:', e);
+        console.error('Failed to sync changes to database:', e);
         setSyncStatus('error');
       }
     }, 600);

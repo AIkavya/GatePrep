@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import {
   handleRegister,
   handleLogin,
@@ -17,23 +17,36 @@ export const app = express();
 
 app.use(express.json({ limit: '50mb' }));
 
+// CORS & Preflight handling
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+const apiRouter = express.Router();
+
 // Health check
-app.get('/api/health', (req: Request, res: Response) => {
+apiRouter.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    database: 'SQLite (sql.js WASM)',
+    database: 'SQLite (sql.js WASM) with JSON fallback',
     jwtAuth: 'enabled',
   });
 });
 
 // Authentication endpoints
-app.post('/api/auth/register', handleRegister);
-app.post('/api/auth/login', handleLogin);
-app.get('/api/auth/me', authMiddleware, handleMe);
+apiRouter.post('/auth/register', handleRegister);
+apiRouter.post('/auth/login', handleLogin);
+apiRouter.get('/auth/me', authMiddleware, handleMe);
 
 // Study Data endpoints (Protected by JWT)
-app.get('/api/gate/data', authMiddleware, async (req: AuthRequest, res: Response) => {
+apiRouter.get('/gate/data', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const data = await getUserStudyData(userId);
@@ -44,19 +57,19 @@ app.get('/api/gate/data', authMiddleware, async (req: AuthRequest, res: Response
   }
 });
 
-app.put('/api/gate/data', authMiddleware, async (req: AuthRequest, res: Response) => {
+apiRouter.put('/gate/data', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const payload = req.body;
     await saveUserStudyData(userId, payload);
-    res.json({ success: true, message: 'Data saved successfully to SQLite database' });
+    res.json({ success: true, message: 'Data saved successfully to database' });
   } catch (error: any) {
     console.error('Error saving user study data:', error);
     res.status(500).json({ error: 'Failed to save study data to database' });
   }
 });
 
-app.post('/api/gate/reset', authMiddleware, async (req: AuthRequest, res: Response) => {
+apiRouter.post('/gate/reset', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     await resetUserStudyData(userId);
@@ -81,7 +94,7 @@ app.post('/api/gate/reset', authMiddleware, async (req: AuthRequest, res: Respon
 });
 
 // Optional action to populate standard syllabus template on explicit request
-app.post('/api/gate/import-template', authMiddleware, async (req: AuthRequest, res: Response) => {
+apiRouter.post('/gate/import-template', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const seed = getInitialSeedData();
@@ -96,3 +109,18 @@ app.post('/api/gate/import-template', authMiddleware, async (req: AuthRequest, r
     res.status(500).json({ error: 'Failed to import template' });
   }
 });
+
+// Mount router on both /api (standard) and / (if serverless rewrites or strips /api prefix)
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
+
+// Global JSON error handler - guarantees server errors are never HTML
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Unhandled API Error:', err);
+  if (!res.headersSent) {
+    res.status(err.status || 500).json({
+      error: err?.message || 'An unexpected server error occurred.',
+    });
+  }
+});
+

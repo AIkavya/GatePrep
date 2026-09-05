@@ -8,6 +8,7 @@ interface AuthContextType {
   error: string | null;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
+  continueAsGuest: () => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -76,6 +77,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const continueAsGuest = () => {
+    const guestUser: AuthUser = { id: 'guest_aspirant', username: 'Guest Aspirant' };
+    const guestToken = 'guest_token_' + Date.now();
+    setUser(guestUser);
+    setToken(guestToken);
+    setError(null);
+    localStorage.setItem('gate_prep_jwt_token', guestToken);
+    localStorage.setItem('gate_prep_user_profile', JSON.stringify(guestUser));
+  };
+
   const logout = () => {
     api.auth.logout();
     setUser(null);
@@ -92,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error,
         login,
         register,
+        continueAsGuest,
         logout,
         isAuthenticated: !!user && !!token,
       }}
