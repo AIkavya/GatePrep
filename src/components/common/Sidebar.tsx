@@ -10,12 +10,29 @@ import {
   Award,
   Sun,
   Moon,
+  LogOut,
+  User,
+  Database,
+  Trash2,
+  Download,
 } from 'lucide-react';
 import { useGate } from '../../context/GateContext';
+import { useAuth } from '../../context/AuthContext';
 import { TabType } from '../../types';
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, revisions, resetDemoData, theme, setTheme } = useGate();
+  const {
+    activeTab,
+    setActiveTab,
+    revisions,
+    subjects,
+    theme,
+    setTheme,
+    syncStatus,
+    resetFreshWorkspace,
+    importSyllabusTemplate,
+  } = useGate();
+  const { user, logout } = useAuth();
 
   // Count revisions that need attention today (due today or overdue)
   const dueCount = revisions.filter(
@@ -48,7 +65,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -117,24 +134,79 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Study Guidance Box */}
-      <div className="p-4 mx-3 mb-4 rounded-2xl bg-[#f5f5f7] dark:bg-[#1d1d1f] border border-[#e5e5ea] dark:border-[#333336] text-xs">
-        <p className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">Daily Objective</p>
-        <p className="text-[#86868b] dark:text-[#a1a1a6] leading-relaxed">
-          Clear today&apos;s revisions first, then proceed to top-priority learning chapters.
-        </p>
-        <button
-          id="btn-reset-demo"
-          onClick={() => {
-            if (window.confirm('Reset all data to default GATE CSE sample data?')) {
-              resetDemoData();
-            }
-          }}
-          className="mt-3 flex items-center gap-1.5 text-[#86868b] hover:text-[#0071e3] dark:hover:text-[#2997ff] transition-colors text-[11px] font-medium"
-        >
-          <RotateCw className="w-3 h-3" />
-          <span>Reset sample data</span>
-        </button>
+      {/* User and Database Status Card */}
+      <div className="p-3 mx-3 mb-3 rounded-2xl bg-[#f5f5f7] dark:bg-[#1d1d1f] border border-[#e5e5ea] dark:border-[#333336]">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-[#0071e3]/10 dark:bg-[#2997ff]/20 text-[#0071e3] dark:text-[#2997ff] flex items-center justify-center font-bold text-xs shrink-0">
+              <User className="w-3.5 h-3.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                {user?.username || 'User'}
+              </p>
+              <div className="flex items-center gap-1 text-[10px] text-[#86868b] dark:text-[#a1a1a6]">
+                <Database className="w-2.5 h-2.5 text-[#0071e3] dark:text-[#2997ff]" />
+                <span>
+                  {syncStatus === 'saving'
+                    ? 'Saving to DB...'
+                    : syncStatus === 'error'
+                    ? 'Sync Error'
+                    : 'SQLite Synced'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            id="btn-sidebar-logout"
+            onClick={logout}
+            title="Sign out"
+            aria-label="Sign out"
+            className="p-1.5 rounded-lg text-[#86868b] hover:text-[#ff3b30] hover:bg-white dark:hover:bg-[#2c2c2e] transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Database Quick Actions */}
+        <div className="pt-2 border-t border-[#e5e5ea] dark:border-[#333336] flex items-center justify-between text-[11px]">
+          {subjects.length === 0 ? (
+            <button
+              id="btn-sidebar-import-template"
+              onClick={importSyllabusTemplate}
+              className="flex items-center gap-1 text-[#0071e3] dark:text-[#2997ff] hover:underline font-medium"
+            >
+              <Download className="w-3 h-3" />
+              <span>Load GATE Template</span>
+            </button>
+          ) : (
+            <button
+              id="btn-sidebar-reset-fresh"
+              onClick={() => {
+                if (window.confirm('Reset workspace to a fresh clean state with 0 items?')) {
+                  resetFreshWorkspace();
+                }
+              }}
+              className="flex items-center gap-1 text-[#86868b] hover:text-[#ff3b30] transition-colors"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Clean Workspace</span>
+            </button>
+          )}
+
+          <button
+            id="btn-sidebar-reseed"
+            onClick={() => {
+              if (window.confirm('Reload standard GATE CSE syllabus template?')) {
+                importSyllabusTemplate();
+              }
+            }}
+            title="Reload standard GATE template"
+            className="text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white"
+          >
+            <RotateCw className="w-3 h-3" />
+          </button>
+        </div>
       </div>
     </aside>
   );

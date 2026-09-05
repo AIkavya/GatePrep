@@ -363,8 +363,8 @@ export const RevisionPage: React.FC = () => {
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={() =>
                         updateRevisionProgress(
@@ -372,7 +372,7 @@ export const RevisionPage: React.FC = () => {
                           Math.min(100, (currentRevision.progress || 0) + 25)
                         )
                       }
-                      className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#ff3b30] dark:text-[#ff453a] hover:opacity-80 rounded-full transition-colors"
+                      className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#ff3b30] dark:text-[#ff453a] hover:opacity-80 rounded-full transition-colors min-h-[32px]"
                     >
                       +25% Progress
                     </button>
@@ -383,13 +383,13 @@ export const RevisionPage: React.FC = () => {
                           Math.min(100, (currentRevision.progress || 0) + 50)
                         )
                       }
-                      className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#ff3b30] dark:text-[#ff453a] hover:opacity-80 rounded-full transition-colors"
+                      className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#ff3b30] dark:text-[#ff453a] hover:opacity-80 rounded-full transition-colors min-h-[32px]"
                     >
                       +50% Progress
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button
                       onClick={() => handleOpenEditRevision(currentRevision)}
                       className="p-1.5 text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] hover:bg-[#e5e5ea] dark:hover:bg-[#2c2c2e] rounded-full transition-colors"
@@ -399,7 +399,7 @@ export const RevisionPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => completeRevision(currentRevision.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-full transition-colors shadow-xs"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-full transition-colors shadow-xs min-h-[36px]"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Mark Revision Complete</span>

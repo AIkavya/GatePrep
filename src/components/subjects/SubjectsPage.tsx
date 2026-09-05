@@ -241,14 +241,14 @@ export const SubjectsPage: React.FC = () => {
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 pr-1">
                     <span
-                      className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white"
+                      className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white shrink-0"
                       style={{ backgroundColor: sub.color || '#0071e3' }}
                     >
                       {sub.code || sub.name}
                     </span>
-                    <h2 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7] leading-snug">{sub.name}</h2>
+                    <h2 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7] leading-snug truncate">{sub.name}</h2>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">

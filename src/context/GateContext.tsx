@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   Subject,
   Chapter,
@@ -18,9 +18,8 @@ import {
 } from '../types';
 import { getInitialSeedData, DEFAULT_REVISION_SETTINGS } from '../data/seedData';
 import { getTodayDateString, addDays, getRevisionStatus } from '../utils/dateUtils';
-
-const STORAGE_KEY = 'gate_prep_storage_v2';
-const SETTINGS_KEY = 'gate_prep_settings_v1';
+import { useAuth } from './AuthContext';
+import { api } from '../services/api';
 
 interface GateContextType {
   // Navigation & global filter
@@ -38,6 +37,8 @@ interface GateContextType {
   calendarEvents: CalendarEvent[];
   exams: Exam[];
   revisionSettings: RevisionSettings;
+  isInitialized: boolean;
+  syncStatus: 'synced' | 'saving' | 'error';
 
   // Subject Actions
   addSubject: (subject: Omit<Subject, 'id'>) => Subject;
@@ -99,8 +100,10 @@ interface GateContextType {
   updateExam: (id: string, updates: Partial<Exam>) => void;
   deleteExam: (id: string) => void;
 
-  // Reset demo data
+  // Database actions
   resetDemoData: () => void;
+  resetFreshWorkspace: () => Promise<void>;
+  importSyllabusTemplate: () => Promise<void>;
 
   // Theme support (Apple Classic White and Apple Classic Dark)
   theme: AppTheme;
@@ -111,6 +114,8 @@ interface GateContextType {
 const GateContext = createContext<GateContextType | undefined>(undefined);
 
 export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
+
   const [theme, setThemeState] = useState<AppTheme>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('gate_prep_theme');
@@ -125,6 +130,7 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedSubjectId, setSelectedSubjectId] = useState<SubjectId | 'all'>('all');
 
+  // Fresh by default: 0 items for new users/fresh install
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [revisions, setRevisions] = useState<Revision[]>([]);
@@ -134,50 +140,82 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [exams, setExams] = useState<Exam[]>([]);
   const [revisionSettings, setRevisionSettings] = useState<RevisionSettings>(DEFAULT_REVISION_SETTINGS);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'saving' | 'error'>('synced');
 
-  // Initialize from LocalStorage
+  const saveTimerRef = useRef<any>(null);
+
+  // Initialize data for the authenticated user from the SQLite database
   useEffect(() => {
-    try {
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      const savedSettings = localStorage.getItem(SETTINGS_KEY);
-
-      if (savedSettings) {
-        setRevisionSettings(JSON.parse(savedSettings));
-      }
-
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
-        setSubjects(parsed.subjects || []);
-        setChapters(parsed.chapters || []);
-        setRevisions(parsed.revisions || []);
-        setPyqs(parsed.pyqs || []);
-        setPyqQueue(parsed.pyqQueue || []);
-        setCalendarEvents(parsed.calendarEvents || []);
-        setExams(parsed.exams && parsed.exams.length > 0 ? parsed.exams : getInitialSeedData().exams);
-      } else {
-        const seed = getInitialSeedData();
-        setSubjects(seed.subjects);
-        setChapters(seed.chapters);
-        setRevisions(seed.revisions);
-        setPyqs(seed.pyqs);
-        setPyqQueue(seed.pyqQueue || []);
-        setCalendarEvents(seed.calendarEvents);
-        setExams(seed.exams);
-      }
-    } catch (e) {
-      console.error('Error loading gate prep storage:', e);
-      const seed = getInitialSeedData();
-      setSubjects(seed.subjects);
-      setChapters(seed.chapters);
-      setRevisions(seed.revisions);
-      setPyqs(seed.pyqs);
-      setPyqQueue(seed.pyqQueue || []);
-      setCalendarEvents(seed.calendarEvents);
-      setExams(seed.exams);
-    } finally {
-      setIsInitialized(true);
+    if (!isAuthenticated || !user) {
+      setIsInitialized(false);
+      setSubjects([]);
+      setChapters([]);
+      setRevisions([]);
+      setPyqs([]);
+      setPyqQueue([]);
+      setCalendarEvents([]);
+      setExams([]);
+      return;
     }
-  }, []);
+
+    let isMounted = true;
+    const userCacheKey = `gate_prep_user_data_${user.id}`;
+
+    async function loadData() {
+      try {
+        // Fast optimistic cache read
+        const cached = localStorage.getItem(userCacheKey);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (isMounted) {
+              setSubjects(parsed.subjects || []);
+              setChapters(parsed.chapters || []);
+              setRevisions(parsed.revisions || []);
+              setPyqs(parsed.pyqs || []);
+              setPyqQueue(parsed.pyqQueue || []);
+              setCalendarEvents(parsed.calendarEvents || []);
+              setExams(parsed.exams || []);
+              if (parsed.revisionSettings) setRevisionSettings(parsed.revisionSettings);
+            }
+          } catch (e) {
+            console.warn('Failed parsing cached study data');
+          }
+        }
+
+        // Fetch authoritative study data from server SQLite database
+        const remoteData = await api.study.getData();
+        if (isMounted && remoteData) {
+          // If the user is fresh/never used before, remoteData contains empty arrays!
+          setSubjects(remoteData.subjects || []);
+          setChapters(remoteData.chapters || []);
+          setRevisions(remoteData.revisions || []);
+          setPyqs(remoteData.pyqs || []);
+          setPyqQueue(remoteData.pyqQueue || []);
+          setCalendarEvents(remoteData.calendarEvents || []);
+          setExams(remoteData.exams || []);
+          if (remoteData.revisionSettings) {
+            setRevisionSettings(remoteData.revisionSettings);
+          }
+
+          localStorage.setItem(userCacheKey, JSON.stringify(remoteData));
+          setSyncStatus('synced');
+        }
+      } catch (err) {
+        console.error('Error loading study data from server database:', err);
+      } finally {
+        if (isMounted) {
+          setIsInitialized(true);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, isAuthenticated]);
 
   // Sync Theme with DOM and localStorage
   useEffect(() => {
@@ -200,33 +238,97 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Sync to LocalStorage on updates
+  // Sync to SQLite database whenever study data changes
   useEffect(() => {
-    if (!isInitialized) return;
-    try {
-      const dataToSave = {
-        subjects,
-        chapters,
-        revisions,
-        pyqs,
-        pyqQueue,
-        calendarEvents,
-        exams,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-    } catch (e) {
-      console.error('Failed to save to localStorage', e);
-    }
-  }, [subjects, chapters, revisions, pyqs, pyqQueue, calendarEvents, exams, isInitialized]);
+    if (!isInitialized || !isAuthenticated || !user) return;
 
-  useEffect(() => {
-    if (!isInitialized) return;
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(revisionSettings));
-    } catch (e) {
-      console.error('Failed to save settings', e);
+    const dataToSave = {
+      subjects,
+      chapters,
+      revisions,
+      pyqs,
+      pyqQueue,
+      calendarEvents,
+      exams,
+      revisionSettings,
+    };
+
+    // Save locally
+    const userCacheKey = `gate_prep_user_data_${user.id}`;
+    localStorage.setItem(userCacheKey, JSON.stringify(dataToSave));
+
+    // Debounced sync to SQLite backend
+    setSyncStatus('saving');
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
     }
-  }, [revisionSettings, isInitialized]);
+
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await api.study.saveData(dataToSave);
+        setSyncStatus('synced');
+      } catch (e) {
+        console.error('Failed to sync changes to SQLite database:', e);
+        setSyncStatus('error');
+      }
+    }, 600);
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [subjects, chapters, revisions, pyqs, pyqQueue, calendarEvents, exams, revisionSettings, isInitialized, isAuthenticated, user]);
+
+  // Reset to clean, completely fresh workspace with 0 data
+  const resetFreshWorkspace = async () => {
+    setSubjects([]);
+    setChapters([]);
+    setRevisions([]);
+    setPyqs([]);
+    setPyqQueue([]);
+    setCalendarEvents([]);
+    setExams([]);
+    setRevisionSettings(DEFAULT_REVISION_SETTINGS);
+
+    if (user) {
+      localStorage.removeItem(`gate_prep_user_data_${user.id}`);
+    }
+
+    try {
+      setSyncStatus('saving');
+      await api.study.resetData();
+      setSyncStatus('synced');
+    } catch (e) {
+      console.error('Failed resetting workspace in database:', e);
+      setSyncStatus('error');
+    }
+  };
+
+  // Optional: Import standard GATE CS Syllabus template
+  const importSyllabusTemplate = async () => {
+    try {
+      setSyncStatus('saving');
+      const res = await api.study.importTemplate();
+      if (res && res.data) {
+        setSubjects(res.data.subjects || []);
+        setChapters(res.data.chapters || []);
+        setRevisions(res.data.revisions || []);
+        setPyqs(res.data.pyqs || []);
+        setPyqQueue(res.data.pyqQueue || []);
+        setCalendarEvents(res.data.calendarEvents || []);
+        setExams(res.data.exams || []);
+      }
+      setSyncStatus('synced');
+    } catch (e) {
+      console.error('Failed importing syllabus template:', e);
+      setSyncStatus('error');
+    }
+  };
+
+  const resetDemoData = () => {
+    importSyllabusTemplate();
+  };
 
   // Recalculate revision statuses against today whenever revisions or today changes
   const computedRevisions = revisions.map((rev) => {
@@ -728,20 +830,6 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setExams((prev) => prev.filter((e) => e.id !== id));
   };
 
-  const resetDemoData = () => {
-    const seed = getInitialSeedData();
-    setSubjects(seed.subjects);
-    setChapters(seed.chapters);
-    setRevisions(seed.revisions);
-    setPyqs(seed.pyqs);
-    setPyqQueue(seed.pyqQueue || []);
-    setCalendarEvents(seed.calendarEvents);
-    setExams(seed.exams);
-    setRevisionSettings(DEFAULT_REVISION_SETTINGS);
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SETTINGS_KEY);
-  };
-
   return (
     <GateContext.Provider
       value={{
@@ -757,6 +845,8 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         calendarEvents,
         exams,
         revisionSettings,
+        isInitialized,
+        syncStatus,
         addSubject,
         updateSubject,
         deleteSubject,
@@ -801,6 +891,8 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateExam,
         deleteExam,
         resetDemoData,
+        resetFreshWorkspace,
+        importSyllabusTemplate,
         theme,
         setTheme,
         toggleTheme,

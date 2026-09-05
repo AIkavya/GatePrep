@@ -248,15 +248,15 @@ export const PyqQueueView: React.FC = () => {
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={() => {
                         const newSolved = Math.min(currentItem.targetQuestions, currentItem.solvedQuestions + 1);
                         const newProg = Math.round((newSolved / currentItem.targetQuestions) * 100);
                         updatePyqQueueProgress(currentItem.id, newProg, newSolved);
                       }}
-                      className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#0071e3] dark:text-[#2997ff] hover:opacity-80 rounded-full transition-colors"
+                      className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#0071e3] dark:text-[#2997ff] hover:opacity-80 rounded-full transition-colors min-h-[32px]"
                     >
                       +1 Solved
                     </button>
@@ -266,17 +266,17 @@ export const PyqQueueView: React.FC = () => {
                         const newProg = Math.round((newSolved / currentItem.targetQuestions) * 100);
                         updatePyqQueueProgress(currentItem.id, newProg, newSolved);
                       }}
-                      className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#0071e3] dark:text-[#2997ff] hover:opacity-80 rounded-full transition-colors"
+                      className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#0071e3] dark:text-[#2997ff] hover:opacity-80 rounded-full transition-colors min-h-[32px]"
                     >
                       +5 Solved
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
                     {currentItem.status === 'not_started' && (
                       <button
                         onClick={() => startPyqQueueItem(currentItem.id)}
-                        className="flex items-center gap-1 px-3.5 py-1.5 bg-[#0071e3] dark:bg-[#2997ff] text-white dark:text-black text-xs font-semibold rounded-full hover:opacity-90 transition-colors"
+                        className="flex items-center gap-1 px-3.5 py-1.5 bg-[#0071e3] dark:bg-[#2997ff] text-white dark:text-black text-xs font-semibold rounded-full hover:opacity-90 transition-colors min-h-[36px]"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         <span>Start Session</span>
@@ -293,7 +293,7 @@ export const PyqQueueView: React.FC = () => {
 
                     <button
                       onClick={() => completePyqQueueItem(currentItem.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-full transition-colors shadow-xs"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-full transition-colors shadow-xs min-h-[36px]"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Target Completed</span>

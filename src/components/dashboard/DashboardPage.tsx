@@ -27,6 +27,7 @@ export const DashboardPage: React.FC = () => {
     updateChapterProgress,
     completeChapter,
     rescheduleRevision,
+    importSyllabusTemplate,
   } = useGate();
 
   const today = getTodayDateString();
@@ -134,31 +135,31 @@ export const DashboardPage: React.FC = () => {
           </p>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-[#333336]">
-            <div>
-              <p className="text-[#86868b] text-xs font-medium">Subjects</p>
-              <p className="text-xl sm:text-2xl font-bold text-white mt-0.5">{totalSubjects}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-6 pt-5 border-t border-[#333336]">
+            <div className="bg-[#1c1c1e]/60 sm:bg-transparent p-2 sm:p-0 rounded-xl">
+              <p className="text-[#86868b] text-[11px] sm:text-xs font-medium">Subjects</p>
+              <p className="text-lg sm:text-2xl font-bold text-white mt-0.5">{totalSubjects}</p>
             </div>
-            <div>
-              <p className="text-[#86868b] text-xs font-medium">Chapters Done</p>
-              <p className="text-xl sm:text-2xl font-bold text-white mt-0.5">
+            <div className="bg-[#1c1c1e]/60 sm:bg-transparent p-2 sm:p-0 rounded-xl">
+              <p className="text-[#86868b] text-[11px] sm:text-xs font-medium">Chapters Done</p>
+              <p className="text-lg sm:text-2xl font-bold text-white mt-0.5 truncate">
                 {completedChaptersCount}{' '}
                 <span className="text-xs font-normal text-[#86868b]">/ {totalChapters}</span>
               </p>
             </div>
-            <div>
-              <p className="text-[#86868b] text-xs font-medium">Revisions Due</p>
+            <div className="bg-[#1c1c1e]/60 sm:bg-transparent p-2 sm:p-0 rounded-xl">
+              <p className="text-[#86868b] text-[11px] sm:text-xs font-medium">Revisions Due</p>
               <p
-                className={`text-xl sm:text-2xl font-bold mt-0.5 ${
+                className={`text-lg sm:text-2xl font-bold mt-0.5 ${
                   todayRevisions.length > 0 ? 'text-[#ff453a]' : 'text-[#30d158]'
                 }`}
               >
                 {todayRevisions.length}
               </p>
             </div>
-            <div>
-              <p className="text-[#86868b] text-xs font-medium">PYQ Attempted</p>
-              <p className="text-xl sm:text-2xl font-bold text-white mt-0.5">
+            <div className="bg-[#1c1c1e]/60 sm:bg-transparent p-2 sm:p-0 rounded-xl">
+              <p className="text-[#86868b] text-[11px] sm:text-xs font-medium">PYQ Attempted</p>
+              <p className="text-lg sm:text-2xl font-bold text-white mt-0.5 truncate">
                 {attemptedPyqsCount}{' '}
                 <span className="text-xs font-normal text-[#30d158]">({accuracyPct}%)</span>
               </p>
@@ -166,6 +167,38 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Fresh Workspace Welcome Banner (Displayed if user has 0 subjects) */}
+      {totalSubjects === 0 && (
+        <div className="bg-white dark:bg-[#161617] rounded-2xl p-4 sm:p-6 border border-[#e5e5ea] dark:border-[#333336] shadow-2xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm sm:text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                Fresh Workspace (0 data)
+              </h3>
+              <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1 max-w-xl leading-relaxed">
+                Your account has started with a clean slate backed by SQLite. You can build your custom curriculum from scratch, or instantly load the standard GATE Computer Science &amp; IT syllabus template with 10+ core subjects and chapters.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
+              <button
+                id="btn-fresh-add-subject"
+                onClick={() => setActiveTab('subjects')}
+                className="flex-1 sm:flex-initial text-center px-4 py-2 bg-[#0071e3] dark:bg-[#2997ff] text-white dark:text-black text-xs font-semibold rounded-full shadow-2xs hover:opacity-90 transition-all cursor-pointer min-h-[38px]"
+              >
+                + Add First Subject
+              </button>
+              <button
+                id="btn-fresh-load-template"
+                onClick={importSyllabusTemplate}
+                className="flex-1 sm:flex-initial text-center px-4 py-2 bg-[#f5f5f7] dark:bg-[#2c2c2e] hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] border border-[#e5e5ea] dark:border-[#3a3a3c] text-xs font-semibold rounded-full shadow-2xs transition-all cursor-pointer min-h-[38px]"
+              >
+                Load GATE CS Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Focus Split Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -239,18 +272,18 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {currentChapter && (
-            <div className="flex items-center gap-2 mt-5 pt-4 border-t border-[#e5e5ea] dark:border-[#333336]">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-5 pt-4 border-t border-[#e5e5ea] dark:border-[#333336]">
               <button
                 id="btn-update-progress"
                 onClick={() => handleOpenProgressModal(currentChapter)}
-                className="flex-1 py-2 px-3 text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] bg-[#f5f5f7] dark:bg-[#2c2c2e] hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] rounded-full border border-[#e5e5ea] dark:border-[#3a3a3c] transition-colors text-center"
+                className="flex-1 py-2 px-3 text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] bg-[#f5f5f7] dark:bg-[#2c2c2e] hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] rounded-full border border-[#e5e5ea] dark:border-[#3a3a3c] transition-colors text-center min-h-[38px] flex items-center justify-center"
               >
                 Update Progress
               </button>
               <button
                 id="btn-mark-chapter-complete"
                 onClick={() => completeChapter(currentChapter.id)}
-                className="flex-1 py-2 px-3 text-xs font-semibold text-white dark:text-black bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff] rounded-full transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 px-3 text-xs font-semibold text-white dark:text-black bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff] rounded-full transition-colors flex items-center justify-center gap-1.5 min-h-[38px]"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Mark Completed</span>
@@ -293,20 +326,20 @@ export const DashboardPage: React.FC = () => {
                   return (
                     <div
                       key={rev.id}
-                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                      className={`p-3 rounded-xl border flex flex-col xs:flex-row xs:items-center justify-between gap-2.5 ${
                         isOverdue
                           ? 'bg-red-50/70 border-red-200/80 dark:bg-red-950/40 dark:border-red-900/60'
                           : 'bg-[#f5f5f7] border-[#e5e5ea] dark:bg-[#1d1d1f] dark:border-[#333336]'
                       }`}
                     >
-                      <div className="flex items-start gap-2.5">
+                      <div className="flex items-start gap-2.5 min-w-0">
                         <span
                           className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${
                             isOverdue ? 'bg-[#ff3b30] dark:bg-[#ff453a] animate-pulse' : 'bg-[#ff9500]'
                           }`}
                         />
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
                               {sub?.code || sub?.name}
                             </span>
@@ -319,25 +352,25 @@ export const DashboardPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] leading-snug mt-0.5">
+                          <p className="text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] leading-snug mt-0.5 truncate">
                             {chap?.name || 'Chapter'}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0 self-end xs:self-auto">
                         <button
                           id={`btn-complete-rev-${rev.id}`}
                           onClick={() => completeRevision(rev.id)}
-                          className="px-3 py-1 text-xs font-semibold rounded-full bg-[#34c759] hover:bg-[#30d158] text-white transition-colors flex items-center gap-1"
+                          className="px-3 py-1.5 text-xs font-semibold rounded-full bg-[#34c759] hover:bg-[#30d158] text-white transition-colors flex items-center gap-1"
                           title="Mark Revision Complete"
                         >
-                          <CheckCircle2 className="w-3 h-3" />
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Done</span>
                         </button>
                         <button
                           onClick={() => handleOpenReschedule(rev.id, rev.dueDate)}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white dark:bg-[#2c2c2e] hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] text-[#86868b] dark:text-[#a1a1a6] border border-[#e5e5ea] dark:border-[#3a3a3c] transition-colors"
+                          className="px-2.5 py-1.5 text-[11px] font-medium rounded-full bg-white dark:bg-[#2c2c2e] hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] text-[#86868b] dark:text-[#a1a1a6] border border-[#e5e5ea] dark:border-[#3a3a3c] transition-colors"
                           title="Reschedule"
                         >
                           Delay
@@ -396,15 +429,15 @@ export const DashboardPage: React.FC = () => {
 
           <div className="mt-4">
             {primaryPyqChapter ? (
-              <div className="p-4 rounded-xl bg-[#f5f5f7] dark:bg-[#1d1d1f] border border-[#e5e5ea] dark:border-[#333336] flex items-center justify-between">
-                <div>
+              <div className="p-4 rounded-xl bg-[#f5f5f7] dark:bg-[#1d1d1f] border border-[#e5e5ea] dark:border-[#333336] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="min-w-0">
                   <span className="text-[11px] font-bold text-[#86868b] dark:text-[#a1a1a6] uppercase tracking-wider">
                     Recommended Focus
                   </span>
-                  <h3 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7] mt-0.5">
+                  <h3 className="text-sm sm:text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7] mt-0.5 truncate">
                     {primaryPyqSubject?.code || primaryPyqSubject?.name} — {primaryPyqChapter.name}
                   </h3>
-                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1">
+                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1 line-clamp-2">
                     {totalUnsolvedInTarget > 0
                       ? `${totalUnsolvedInTarget} questions remaining for this topic`
                       : 'Sample GATE questions ready for practice'}
@@ -418,7 +451,7 @@ export const DashboardPage: React.FC = () => {
                     }
                     setActiveTab('pyq');
                   }}
-                  className="px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff] text-white dark:text-black text-xs font-semibold transition-colors shrink-0 shadow-xs"
+                  className="px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff] text-white dark:text-black text-xs font-semibold transition-colors shrink-0 shadow-xs self-start sm:self-auto min-h-[36px]"
                 >
                   Start Practice
                 </button>

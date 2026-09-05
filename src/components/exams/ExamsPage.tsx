@@ -446,11 +446,11 @@ export const ExamsPage: React.FC = () => {
       </div>
 
       {/* Main View Mode Selector (Apple Pill Switcher) */}
-      <div className="inline-flex p-1 bg-[#f5f5f7] dark:bg-[#1d1d1f] rounded-full border border-[#e5e5ea] dark:border-[#333336]">
+      <div className="flex items-center gap-1.5 overflow-x-auto p-1 bg-[#f5f5f7] dark:bg-[#1d1d1f] rounded-2xl sm:rounded-full border border-[#e5e5ea] dark:border-[#333336] scrollbar-thin">
         <button
           id="tab-view-records"
           onClick={() => setActiveView('records')}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
             activeView === 'records'
               ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-xs'
               : 'text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
@@ -466,7 +466,7 @@ export const ExamsPage: React.FC = () => {
         <button
           id="tab-view-calendar"
           onClick={() => setActiveView('calendar')}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
             activeView === 'calendar'
               ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-xs'
               : 'text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
@@ -479,7 +479,7 @@ export const ExamsPage: React.FC = () => {
         <button
           id="tab-view-topics"
           onClick={() => setActiveView('topics')}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
             activeView === 'topics'
               ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-xs'
               : 'text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
@@ -832,7 +832,7 @@ export const ExamsPage: React.FC = () => {
         <div className="space-y-4">
           <div className="bg-white dark:bg-[#161617] p-5 rounded-2xl border border-[#e5e5ea] dark:border-[#333336] shadow-2xs">
             {/* Calendar Controls */}
-            <div className="flex items-center justify-between gap-4 mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
               <div className="flex items-center gap-2">
                 <button
                   id="btn-exam-cal-prev"
@@ -853,7 +853,7 @@ export const ExamsPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={jumpToToday}
                   className="px-3.5 py-1.5 text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] bg-[#f5f5f7] dark:bg-[#2c2c2e] hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] rounded-full border border-[#e5e5ea] dark:border-[#3a3a3c] transition-colors"
@@ -870,79 +870,84 @@ export const ExamsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Calendar Day-of-Week Headers */}
-            <div className="grid grid-cols-7 text-center font-bold text-[#86868b] dark:text-[#a1a1a6] text-xs mb-2">
-              <span>Sun</span>
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-            </div>
+            {/* Calendar Grid Container with horizontal scroll for narrow mobile screens */}
+            <div className="overflow-x-auto scrollbar-thin">
+              <div className="min-w-[500px] sm:min-w-0">
+                {/* Calendar Day-of-Week Headers */}
+                <div className="grid grid-cols-7 text-center font-bold text-[#86868b] dark:text-[#a1a1a6] text-xs mb-2">
+                  <span>Sun</span>
+                  <span>Mon</span>
+                  <span>Tue</span>
+                  <span>Wed</span>
+                  <span>Thu</span>
+                  <span>Fri</span>
+                  <span>Sat</span>
+                </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
-              {/* Empty leading days */}
-              {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="h-20 sm:h-24 bg-[#f5f5f7]/40 dark:bg-[#1d1d1f]/40 rounded-xl border border-transparent" />
-              ))}
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                  {/* Empty leading days */}
+                  {Array.from({ length: firstDay }).map((_, i) => (
+                    <div key={`empty-${i}`} className="h-20 sm:h-24 bg-[#f5f5f7]/40 dark:bg-[#1d1d1f]/40 rounded-xl border border-transparent" />
+                  ))}
 
-              {/* Month days */}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const dayNum = i + 1;
-                const mStr = String(calMonth + 1).padStart(2, '0');
-                const dStr = String(dayNum).padStart(2, '0');
-                const dateKey = `${calYear}-${mStr}-${dStr}`;
+                  {/* Month days */}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const dayNum = i + 1;
+                    const mStr = String(calMonth + 1).padStart(2, '0');
+                    const dStr = String(dayNum).padStart(2, '0');
+                    const dateKey = `${calYear}-${mStr}-${dStr}`;
 
-                const dayExams = exams.filter((e) => e.date === dateKey);
-                const isToday = dateKey === today;
-                const isSelected = dateKey === selectedCalDate;
+                    const dayExams = exams.filter((e) => e.date === dateKey);
+                    const isToday = dateKey === today;
+                    const isSelected = dateKey === selectedCalDate;
 
-                return (
-                  <div
-                    key={dateKey}
-                    onClick={() => setSelectedCalDate(dateKey)}
-                    className={`h-20 sm:h-24 p-1.5 sm:p-2 rounded-xl border flex flex-col justify-between transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-[#0071e3] dark:border-[#2997ff] ring-2 ring-[#0071e3]/20 dark:ring-[#2997ff]/20 bg-blue-50/30 dark:bg-blue-950/20'
-                        : isToday
-                        ? 'border-blue-300 dark:border-blue-700 bg-[#f5f5f7] dark:bg-[#1d1d1f]'
-                        : 'border-[#e5e5ea] dark:border-[#333336] bg-white dark:bg-[#161617] hover:border-[#d2d2d7] dark:hover:border-[#424245]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`text-xs font-bold leading-none ${
-                          isToday ? 'text-[#0071e3] dark:text-[#2997ff]' : 'text-[#1d1d1f] dark:text-[#f5f5f7]'
+                    return (
+                      <div
+                        key={dateKey}
+                        onClick={() => setSelectedCalDate(dateKey)}
+                        className={`h-20 sm:h-24 p-1.5 sm:p-2 rounded-xl border flex flex-col justify-between transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-[#0071e3] dark:border-[#2997ff] ring-2 ring-[#0071e3]/20 dark:ring-[#2997ff]/20 bg-blue-50/30 dark:bg-blue-950/20'
+                            : isToday
+                            ? 'border-blue-300 dark:border-blue-700 bg-[#f5f5f7] dark:bg-[#1d1d1f]'
+                            : 'border-[#e5e5ea] dark:border-[#333336] bg-white dark:bg-[#161617] hover:border-[#d2d2d7] dark:hover:border-[#424245]'
                         }`}
                       >
-                        {dayNum}
-                      </span>
-                      {dayExams.length > 0 && (
-                        <span className="w-2 h-2 rounded-full bg-[#0071e3] dark:bg-[#2997ff] shrink-0" />
-                      )}
-                    </div>
-
-                    {/* Day Exam Badges */}
-                    <div className="space-y-1 overflow-y-auto max-h-12 sm:max-h-14 mt-1">
-                      {dayExams.map((ex) => (
-                        <div
-                          key={ex.id}
-                          className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full truncate font-medium ${
-                            ex.examType === 'full_length'
-                              ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300'
-                              : 'bg-blue-100 dark:bg-blue-950/60 text-[#0071e3] dark:text-[#2997ff]'
-                          }`}
-                          title={`${ex.title} - ${ex.status === 'completed' ? `${ex.obtainedMarks}/${ex.totalMarks}` : 'Scheduled'}`}
-                        >
-                          {ex.title}
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-xs font-bold leading-none ${
+                              isToday ? 'text-[#0071e3] dark:text-[#2997ff]' : 'text-[#1d1d1f] dark:text-[#f5f5f7]'
+                            }`}
+                          >
+                            {dayNum}
+                          </span>
+                          {dayExams.length > 0 && (
+                            <span className="w-2 h-2 rounded-full bg-[#0071e3] dark:bg-[#2997ff] shrink-0" />
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+
+                        {/* Day Exam Badges */}
+                        <div className="space-y-1 overflow-y-auto max-h-12 sm:max-h-14 mt-1">
+                          {dayExams.map((ex) => (
+                            <div
+                              key={ex.id}
+                              className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full truncate font-medium ${
+                                ex.examType === 'full_length'
+                                  ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300'
+                                  : 'bg-blue-100 dark:bg-blue-950/60 text-[#0071e3] dark:text-[#2997ff]'
+                              }`}
+                              title={`${ex.title} - ${ex.status === 'completed' ? `${ex.obtainedMarks}/${ex.totalMarks}` : 'Scheduled'}`}
+                            >
+                              {ex.title}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 

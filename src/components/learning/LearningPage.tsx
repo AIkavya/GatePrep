@@ -383,7 +383,7 @@ export const LearningPage: React.FC = () => {
                       </div>
 
                       {/* Controls: Priority, Start, Complete, Edit, Delete */}
-                      <div className="flex items-center gap-2 self-end sm:self-center">
+                      <div className="flex flex-wrap items-center gap-1.5 self-start xs:self-end sm:self-center">
                         {/* Priority Box */}
                         <div className="flex items-center gap-1 bg-[#f5f5f7] dark:bg-[#2c2c2e] px-2.5 py-1 rounded-full text-xs">
                           <span className="text-[11px] text-[#86868b] dark:text-[#a1a1a6]">P:</span>
@@ -391,14 +391,14 @@ export const LearningPage: React.FC = () => {
                           <div className="flex flex-col ml-1">
                             <button
                               onClick={() => adjustChapterPriority(chap.id, 1)}
-                              className="hover:text-[#0071e3] dark:hover:text-[#2997ff]"
+                              className="hover:text-[#0071e3] dark:hover:text-[#2997ff] p-0.5"
                               title="Increase priority"
                             >
                               <ArrowUp className="w-3 h-3" />
                             </button>
                             <button
                               onClick={() => adjustChapterPriority(chap.id, -1)}
-                              className="hover:text-[#0071e3] dark:hover:text-[#2997ff]"
+                              className="hover:text-[#0071e3] dark:hover:text-[#2997ff] p-0.5"
                               title="Decrease priority"
                             >
                               <ArrowDown className="w-3 h-3" />

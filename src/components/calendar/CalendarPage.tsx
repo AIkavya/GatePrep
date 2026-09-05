@@ -220,97 +220,102 @@ export const CalendarPage: React.FC = () => {
           </span>
         </div>
 
-        {/* Day of Week Labels (Mon to Sun) */}
-        <div className="grid grid-cols-7 border-b border-[#e5e5ea] dark:border-[#333336] text-center text-xs font-bold text-[#86868b] dark:text-[#a1a1a6] uppercase tracking-wider py-2.5 bg-white dark:bg-[#161617]">
-          <span>Mon</span>
-          <span>Tue</span>
-          <span>Wed</span>
-          <span>Thu</span>
-          <span>Fri</span>
-          <span>Sat</span>
-          <span>Sun</span>
-        </div>
+        {/* Calendar Grid with responsive horizontal scroll for small screens */}
+        <div className="overflow-x-auto scrollbar-thin">
+          <div className="min-w-[560px] sm:min-w-0">
+            {/* Day of Week Labels (Mon to Sun) */}
+            <div className="grid grid-cols-7 border-b border-[#e5e5ea] dark:border-[#333336] text-center text-xs font-bold text-[#86868b] dark:text-[#a1a1a6] uppercase tracking-wider py-2.5 bg-white dark:bg-[#161617]">
+              <span>Mon</span>
+              <span>Tue</span>
+              <span>Wed</span>
+              <span>Thu</span>
+              <span>Fri</span>
+              <span>Sat</span>
+              <span>Sun</span>
+            </div>
 
-        {/* Days Grid */}
-        <div className="grid grid-cols-7 divide-x divide-y divide-[#e5e5ea] dark:divide-[#333336] bg-[#e5e5ea] dark:bg-[#333336]">
-          {daysArray.map((dayNum, index) => {
-            if (dayNum === null) {
-              return (
-                <div
-                  key={`empty-${index}`}
-                  className="min-h-[100px] sm:min-h-[120px] bg-[#f5f5f7]/60 dark:bg-[#1d1d1f]/60 p-2"
-                />
-              );
-            }
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 divide-x divide-y divide-[#e5e5ea] dark:divide-[#333336] bg-[#e5e5ea] dark:bg-[#333336]">
+              {daysArray.map((dayNum, index) => {
+                if (dayNum === null) {
+                  return (
+                    <div
+                      key={`empty-${index}`}
+                      className="min-h-[100px] sm:min-h-[120px] bg-[#f5f5f7]/60 dark:bg-[#1d1d1f]/60 p-2"
+                    />
+                  );
+                }
 
-            const monthStr = String(month + 1).padStart(2, '0');
-            const dayStr = String(dayNum).padStart(2, '0');
-            const currentCellDate = `${year}-${monthStr}-${dayStr}`;
-            const isToday = currentCellDate === todayStr;
+                const monthStr = String(month + 1).padStart(2, '0');
+                const dayStr = String(dayNum).padStart(2, '0');
+                const currentCellDate = `${year}-${monthStr}-${dayStr}`;
+                const isToday = currentCellDate === todayStr;
 
-            const cellEvents = filteredEvents.filter((ev) => ev.date === currentCellDate);
+                const cellEvents = filteredEvents.filter((ev) => ev.date === currentCellDate);
 
-            return (
-              <div
-                key={`day-${dayNum}`}
-                onClick={() => handleOpenAddForDate(currentCellDate)}
-                className={`min-h-[100px] sm:min-h-[120px] bg-white dark:bg-[#161617] p-1.5 sm:p-2 relative flex flex-col justify-between group hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition-colors cursor-pointer ${
-                  isToday ? 'bg-blue-50/30 dark:bg-blue-950/30' : ''
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                        isToday
-                          ? 'bg-[#0071e3] dark:bg-[#2997ff] text-white dark:text-black'
-                          : 'text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#0071e3] dark:group-hover:text-[#2997ff]'
-                      }`}
-                    >
-                      {dayNum}
-                    </span>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenAddForDate(currentCellDate);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded-full hover:bg-[#e5e5ea] dark:hover:bg-[#2c2c2e] text-[#86868b]"
-                      title="Add event on this day"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  {/* Events list */}
-                  <div className="mt-1 space-y-1 overflow-hidden">
-                    {cellEvents.map((ev) => {
-                      const isCompleted = ev.status === 'completed';
-                      let colorClasses = 'bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] border-[#e5e5ea] dark:border-[#3a3a3c]';
-                      if (ev.type === 'revision') colorClasses = 'bg-red-50 dark:bg-red-950/40 text-[#ff3b30] dark:text-[#ff453a] border-red-200/70 dark:border-red-800/60';
-                      if (ev.type === 'learning') colorClasses = 'bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border-blue-200/70 dark:border-blue-800/60';
-                      if (ev.type === 'pyq') colorClasses = 'bg-purple-50 dark:bg-purple-950/40 text-[#af52de] border-purple-200/70 dark:border-purple-800/60';
-
-                      return (
-                        <div
-                          key={ev.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedEvent(ev);
-                          }}
-                          className={`px-1.5 py-0.5 rounded-md text-[11px] font-medium border truncate cursor-pointer hover:shadow-xs transition-shadow flex items-center gap-1 ${colorClasses} ${
-                            isCompleted ? 'line-through opacity-60' : ''
+                return (
+                  <div
+                    key={`day-${dayNum}`}
+                    onClick={() => handleOpenAddForDate(currentCellDate)}
+                    className={`min-h-[100px] sm:min-h-[120px] bg-white dark:bg-[#161617] p-1.5 sm:p-2 relative flex flex-col justify-between group hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition-colors cursor-pointer ${
+                      isToday ? 'bg-blue-50/30 dark:bg-blue-950/30' : ''
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                            isToday
+                              ? 'bg-[#0071e3] dark:bg-[#2997ff] text-white dark:text-black'
+                              : 'text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#0071e3] dark:group-hover:text-[#2997ff]'
                           }`}
                         >
-                          <span className="truncate">{ev.title}</span>
-                        </div>
-                      );
-                    })}
+                          {dayNum}
+                        </span>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAddForDate(currentCellDate);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded-full hover:bg-[#e5e5ea] dark:hover:bg-[#2c2c2e] text-[#86868b]"
+                          title="Add event on this day"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {/* Events list */}
+                      <div className="mt-1 space-y-1 overflow-hidden">
+                        {cellEvents.map((ev) => {
+                          const isCompleted = ev.status === 'completed';
+                          let colorClasses = 'bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] border-[#e5e5ea] dark:border-[#3a3a3c]';
+                          if (ev.type === 'revision') colorClasses = 'bg-red-50 dark:bg-red-950/40 text-[#ff3b30] dark:text-[#ff453a] border-red-200/70 dark:border-red-800/60';
+                          if (ev.type === 'learning') colorClasses = 'bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border-blue-200/70 dark:border-blue-800/60';
+                          if (ev.type === 'pyq') colorClasses = 'bg-purple-50 dark:bg-purple-950/40 text-[#af52de] border-purple-200/70 dark:border-purple-800/60';
+
+                          return (
+                            <div
+                              key={ev.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedEvent(ev);
+                              }}
+                              className={`px-1.5 py-0.5 rounded-md text-[11px] font-medium border truncate cursor-pointer hover:shadow-xs transition-shadow flex items-center gap-1 ${colorClasses} ${
+                                isCompleted ? 'line-through opacity-60' : ''
+                              }`}
+                            >
+                              <span className="truncate">{ev.title}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
