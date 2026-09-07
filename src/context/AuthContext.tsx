@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api, AuthUser, getStoredToken, getStoredUser, clearStoredAuth } from '../services/api';
+import { api, AuthUser, getStoredToken, getStoredUser, setStoredToken, clearStoredAuth } from '../services/api';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -26,6 +26,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     async function verifyAuth() {
       const storedToken = getStoredToken();
       if (!storedToken) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (storedToken.startsWith('guest_token_')) {
+        const storedUser = getStoredUser() || { id: 'guest_aspirant', username: 'Guest Aspirant' };
+        setUser(storedUser);
+        setToken(storedToken);
         setIsLoading(false);
         return;
       }
@@ -83,8 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(guestUser);
     setToken(guestToken);
     setError(null);
-    localStorage.setItem('gate_prep_jwt_token', guestToken);
-    localStorage.setItem('gate_prep_user_profile', JSON.stringify(guestUser));
+    setStoredToken(guestToken, guestUser);
   };
 
   const logout = () => {
