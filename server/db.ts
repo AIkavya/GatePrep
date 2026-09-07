@@ -110,12 +110,20 @@ function getCurrentDir(): string {
   }
 }
 
+export function generateUserId(username: string): string {
+  const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  return `usr_${clean}`;
+}
+
 export async function getDb(): Promise<Database | null> {
   if (isFallbackMode) return null;
   if (dbInstance) return dbInstance;
 
   try {
     const currentDir = getCurrentDir();
+    // Pre-warm in-memory structures from backup store
+    loadFallbackData();
+
     // Attempt locating sql-wasm.wasm across common bundle and filesystem paths
     const SQL = await initSqlJs({
       locateFile: (file: string) => {
@@ -187,18 +195,16 @@ export async function getDb(): Promise<Database | null> {
 }
 
 export function persistDb(): void {
-  if (isFallbackMode) {
-    persistFallbackData();
-    return;
-  }
-  if (!dbInstance || !dbPath) return;
+  // Always persist memory fallback to JSON alongside SQLite export
+  persistFallbackData();
+
+  if (isFallbackMode || !dbInstance || !dbPath) return;
   try {
     const data = dbInstance.export();
     const buffer = Buffer.from(data);
     fs.writeFileSync(dbPath, buffer);
   } catch (e) {
     console.error('Error persisting SQLite database to disk at ' + dbPath + ':', e);
-    // If local write failed, attempt saving to /tmp fallback
     if (!dbPath.startsWith('/tmp')) {
       try {
         const fallbackPath = path.join('/tmp', 'gate_prep.sqlite');
@@ -216,28 +222,31 @@ export function persistDb(): void {
 // User helper methods
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const cleanUsername = username.trim().toLowerCase();
-  const db = await getDb();
-  if (!db) {
-    for (const u of memoryUsers.values()) {
-      if (u.username.toLowerCase() === cleanUsername) {
-        return u;
-      }
+
+  // Check in-memory store first
+  for (const u of memoryUsers.values()) {
+    if (u.username.toLowerCase() === cleanUsername) {
+      return u;
     }
-    return null;
   }
+
+  const db = await getDb();
+  if (!db) return null;
 
   try {
     const stmt = db.prepare('SELECT id, username, password_hash, created_at FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1');
-    stmt.bind([username]);
+    stmt.bind([cleanUsername]);
     if (stmt.step()) {
       const row = stmt.getAsObject() as any;
       stmt.free();
-      return {
+      const userRec: UserRecord = {
         id: row.id,
         username: row.username,
         password_hash: row.password_hash,
         created_at: row.created_at,
       };
+      memoryUsers.set(userRec.id, userRec);
+      return userRec;
     }
     stmt.free();
     return null;
@@ -251,9 +260,13 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
 }
 
 export async function findUserById(id: string): Promise<UserRecord | null> {
+  if (memoryUsers.has(id)) {
+    return memoryUsers.get(id)!;
+  }
+
   const db = await getDb();
   if (!db) {
-    return memoryUsers.get(id) || null;
+    return null;
   }
 
   try {
@@ -262,12 +275,14 @@ export async function findUserById(id: string): Promise<UserRecord | null> {
     if (stmt.step()) {
       const row = stmt.getAsObject() as any;
       stmt.free();
-      return {
+      const userRec: UserRecord = {
         id: row.id,
         username: row.username,
         password_hash: row.password_hash,
         created_at: row.created_at,
       };
+      memoryUsers.set(userRec.id, userRec);
+      return userRec;
     }
     stmt.free();
     return null;
@@ -286,9 +301,9 @@ export async function insertUser(id: string, username: string, passwordHash: str
     created_at: now,
   };
 
-  const db = await getDb();
-  if (!db) {
-    memoryUsers.set(id, newUser);
+  // Always keep in-memory maps in sync
+  memoryUsers.set(id, newUser);
+  if (!memoryStudyData.has(id)) {
     memoryStudyData.set(id, {
       subjects: [],
       chapters: [],
@@ -299,30 +314,52 @@ export async function insertUser(id: string, username: string, passwordHash: str
       exams: [],
       revisionSettings: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
     });
+  }
+
+  const db = await getDb();
+  if (!db) {
     persistFallbackData();
     return newUser;
   }
 
   try {
-    db.run(
-      'INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)',
-      [id, username, passwordHash, now]
-    );
+    const checkUser = db.prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
+    checkUser.bind([id]);
+    const userExists = checkUser.step();
+    checkUser.free();
 
-    // Initialize fresh, completely empty study data for the new user
-    const defaultSettings = JSON.stringify({ rev1Days: 7, rev2Days: 14, rev3Days: 28 });
-    db.run(
-      `INSERT INTO study_data (
-        user_id, subjects_json, chapters_json, revisions_json, pyqs_json, 
-        pyq_queue_json, calendar_json, exams_json, settings_json, updated_at
-      ) VALUES (?, '[]', '[]', '[]', '[]', '[]', '[]', '[]', ?, ?)`,
-      [id, defaultSettings, now]
-    );
+    if (userExists) {
+      db.run(
+        'UPDATE users SET username = ?, password_hash = ? WHERE id = ?',
+        [username, passwordHash, id]
+      );
+    } else {
+      db.run(
+        'INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)',
+        [id, username, passwordHash, now]
+      );
+    }
+
+    // Initialize fresh study_data row if not exists
+    const checkStudy = db.prepare('SELECT user_id FROM study_data WHERE user_id = ? LIMIT 1');
+    checkStudy.bind([id]);
+    const studyExists = checkStudy.step();
+    checkStudy.free();
+
+    if (!studyExists) {
+      const defaultSettings = JSON.stringify({ rev1Days: 7, rev2Days: 14, rev3Days: 28 });
+      db.run(
+        `INSERT INTO study_data (
+          user_id, subjects_json, chapters_json, revisions_json, pyqs_json, 
+          pyq_queue_json, calendar_json, exams_json, settings_json, updated_at
+        ) VALUES (?, '[]', '[]', '[]', '[]', '[]', '[]', '[]', ?, ?)`,
+        [id, defaultSettings, now]
+      );
+    }
 
     persistDb();
   } catch (err) {
     console.warn('SQLite insert failed, persisting to memory fallback:', err);
-    memoryUsers.set(id, newUser);
     persistFallbackData();
   }
 
@@ -330,10 +367,11 @@ export async function insertUser(id: string, username: string, passwordHash: str
 }
 
 export async function getUserStudyData(userId: string): Promise<StudyDataRecord> {
+  const memoryRecord = memoryStudyData.get(userId);
   const db = await getDb();
   if (!db) {
     return (
-      memoryStudyData.get(userId) || {
+      memoryRecord || {
         subjects: [],
         chapters: [],
         revisions: [],
@@ -358,7 +396,7 @@ export async function getUserStudyData(userId: string): Promise<StudyDataRecord>
       const row = stmt.getAsObject() as any;
       stmt.free();
       try {
-        return {
+        const record: StudyDataRecord = {
           subjects: JSON.parse(row.subjects_json || '[]'),
           chapters: JSON.parse(row.chapters_json || '[]'),
           revisions: JSON.parse(row.revisions_json || '[]'),
@@ -368,6 +406,8 @@ export async function getUserStudyData(userId: string): Promise<StudyDataRecord>
           exams: JSON.parse(row.exams_json || '[]'),
           revisionSettings: JSON.parse(row.settings_json || '{"rev1Days":7,"rev2Days":14,"rev3Days":28}'),
         };
+        memoryStudyData.set(userId, record);
+        return record;
       } catch (e) {
         console.error('Error parsing study data JSON:', e);
       }
@@ -375,13 +415,14 @@ export async function getUserStudyData(userId: string): Promise<StudyDataRecord>
       stmt.free();
     }
   } catch (err) {
-    console.warn('SQLite select study data failed, checking fallback:', err);
-    if (memoryStudyData.has(userId)) {
-      return memoryStudyData.get(userId)!;
-    }
+    console.warn('SQLite select study data failed, checking memory:', err);
   }
 
-  // Fresh empty state if record doesn't exist
+  if (memoryRecord) {
+    return memoryRecord;
+  }
+
+  // Fresh empty state if record doesn't exist anywhere
   return {
     subjects: [],
     chapters: [],
@@ -398,28 +439,21 @@ export async function saveUserStudyData(userId: string, data: Partial<StudyDataR
   const db = await getDb();
   const now = new Date().toISOString();
 
-  // Always keep fallback in sync
-  const existing = memoryStudyData.get(userId) || {
-    subjects: [],
-    chapters: [],
-    revisions: [],
-    pyqs: [],
-    pyqQueue: [],
-    calendarEvents: [],
-    exams: [],
-    revisionSettings: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
+  // Retrieve existing record first to merge partial update cleanly
+  const existing = await getUserStudyData(userId);
+
+  const updatedData: StudyDataRecord = {
+    subjects: data.subjects !== undefined ? data.subjects : (existing.subjects || []),
+    chapters: data.chapters !== undefined ? data.chapters : (existing.chapters || []),
+    revisions: data.revisions !== undefined ? data.revisions : (existing.revisions || []),
+    pyqs: data.pyqs !== undefined ? data.pyqs : (existing.pyqs || []),
+    pyqQueue: data.pyqQueue !== undefined ? data.pyqQueue : (existing.pyqQueue || []),
+    calendarEvents: data.calendarEvents !== undefined ? data.calendarEvents : (existing.calendarEvents || []),
+    exams: data.exams !== undefined ? data.exams : (existing.exams || []),
+    revisionSettings: data.revisionSettings !== undefined ? data.revisionSettings : (existing.revisionSettings || { rev1Days: 7, rev2Days: 14, rev3Days: 28 }),
   };
-  const updatedFallback: StudyDataRecord = {
-    subjects: data.subjects !== undefined ? data.subjects : existing.subjects,
-    chapters: data.chapters !== undefined ? data.chapters : existing.chapters,
-    revisions: data.revisions !== undefined ? data.revisions : existing.revisions,
-    pyqs: data.pyqs !== undefined ? data.pyqs : existing.pyqs,
-    pyqQueue: data.pyqQueue !== undefined ? data.pyqQueue : existing.pyqQueue,
-    calendarEvents: data.calendarEvents !== undefined ? data.calendarEvents : existing.calendarEvents,
-    exams: data.exams !== undefined ? data.exams : existing.exams,
-    revisionSettings: data.revisionSettings !== undefined ? data.revisionSettings : existing.revisionSettings,
-  };
-  memoryStudyData.set(userId, updatedFallback);
+
+  memoryStudyData.set(userId, updatedData);
 
   if (!db) {
     persistFallbackData();
@@ -427,20 +461,19 @@ export async function saveUserStudyData(userId: string, data: Partial<StudyDataR
   }
 
   try {
-    // Check if study_data row exists
-    const checkStmt = db.prepare('SELECT user_id FROM study_data WHERE user_id = ?');
+    const subjectsJson = JSON.stringify(updatedData.subjects);
+    const chaptersJson = JSON.stringify(updatedData.chapters);
+    const revisionsJson = JSON.stringify(updatedData.revisions);
+    const pyqsJson = JSON.stringify(updatedData.pyqs);
+    const pyqQueueJson = JSON.stringify(updatedData.pyqQueue);
+    const calendarJson = JSON.stringify(updatedData.calendarEvents);
+    const examsJson = JSON.stringify(updatedData.exams);
+    const settingsJson = JSON.stringify(updatedData.revisionSettings);
+
+    const checkStmt = db.prepare('SELECT user_id FROM study_data WHERE user_id = ? LIMIT 1');
     checkStmt.bind([userId]);
     const exists = checkStmt.step();
     checkStmt.free();
-
-    const subjectsJson = data.subjects !== undefined ? JSON.stringify(data.subjects) : '[]';
-    const chaptersJson = data.chapters !== undefined ? JSON.stringify(data.chapters) : '[]';
-    const revisionsJson = data.revisions !== undefined ? JSON.stringify(data.revisions) : '[]';
-    const pyqsJson = data.pyqs !== undefined ? JSON.stringify(data.pyqs) : '[]';
-    const pyqQueueJson = data.pyqQueue !== undefined ? JSON.stringify(data.pyqQueue) : '[]';
-    const calendarJson = data.calendarEvents !== undefined ? JSON.stringify(data.calendarEvents) : '[]';
-    const examsJson = data.exams !== undefined ? JSON.stringify(data.exams) : '[]';
-    const settingsJson = data.revisionSettings !== undefined ? JSON.stringify(data.revisionSettings) : '{"rev1Days":7,"rev2Days":14,"rev3Days":28}';
 
     if (exists) {
       db.run(
@@ -539,3 +572,4 @@ export async function resetUserStudyData(userId: string): Promise<void> {
     persistFallbackData();
   }
 }
+

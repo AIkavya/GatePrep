@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { findUserByUsername, findUserById, insertUser } from './db.js';
+import { findUserByUsername, findUserById, insertUser, generateUserId } from './db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gate-prep-super-secret-jwt-key-2026';
 
@@ -63,8 +63,8 @@ export async function handleRegister(req: Request, res: Response): Promise<void>
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Generate unique user ID
-    const userId = 'usr_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+    // Generate deterministic user ID based on username
+    const userId = generateUserId(cleanUsername);
 
     // Create user and initial fresh empty database record
     const newUser = await insertUser(userId, cleanUsername, passwordHash);
@@ -73,7 +73,7 @@ export async function handleRegister(req: Request, res: Response): Promise<void>
     const token = generateToken({ id: newUser.id, username: newUser.username });
 
     res.status(201).json({
-      message: 'Account registered successfully. Fresh workspace initialized.',
+      message: 'Account registered successfully.',
       token,
       user: {
         id: newUser.id,
@@ -100,11 +100,11 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
 
     if (!user) {
       // In serverless environments (e.g. Vercel) where /tmp resets between cold starts,
-      // auto-create/restore the user account with the provided credentials
+      // auto-create/restore the user account with the provided credentials and deterministic userId
       if (typeof username === 'string' && cleanUsername.length >= 3 && typeof password === 'string' && password.length >= 4) {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        const userId = 'usr_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+        const userId = generateUserId(cleanUsername);
         user = await insertUser(userId, cleanUsername, passwordHash);
       } else {
         res.status(401).json({ error: 'Invalid username or password.' });
@@ -143,7 +143,7 @@ export async function handleMe(req: AuthRequest, res: Response): Promise<void> {
 
     let user = await findUserById(req.userId);
     if (!user && req.username) {
-      // If server database was reset on Vercel restart, auto-recreate user record from JWT token
+      // If server database was reset on Vercel restart, auto-recreate user record using deterministic ID from token
       const salt = await bcrypt.genSalt(10);
       const dummyHash = await bcrypt.hash('ephemeral_password', salt);
       user = await insertUser(req.userId, req.username, dummyHash);
@@ -165,3 +165,4 @@ export async function handleMe(req: AuthRequest, res: Response): Promise<void> {
     res.status(500).json({ error: 'Internal server error.' });
   }
 }
+
