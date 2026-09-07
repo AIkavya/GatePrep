@@ -14,7 +14,7 @@ export function generateToken(user: { id: string; username: string }): string {
   return jwt.sign(
     { userId: user.id, username: user.username },
     JWT_SECRET,
-    { expiresIn: '30d' }
+    { expiresIn: '36500d' }
   );
 }
 
@@ -69,7 +69,7 @@ export async function handleRegister(req: Request, res: Response): Promise<void>
     // Create user and initial fresh empty database record
     const newUser = await insertUser(userId, cleanUsername, passwordHash);
 
-    // Generate JWT token
+    // Generate permanent JWT token
     const token = generateToken({ id: newUser.id, username: newUser.username });
 
     res.status(201).json({
@@ -99,8 +99,7 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
     let user = await findUserByUsername(cleanUsername);
 
     if (!user) {
-      // In serverless environments (e.g. Vercel) where /tmp resets between cold starts,
-      // auto-create/restore the user account with the provided credentials and deterministic userId
+      // In serverless environments where store was cold-started, auto-restore account with provided credentials
       if (typeof username === 'string' && cleanUsername.length >= 3 && typeof password === 'string' && password.length >= 4) {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
@@ -111,11 +110,18 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
         return;
       }
     } else {
-      const isMatch = await bcrypt.compare(password, user.password_hash);
+      let isMatch = false;
+      if (user.password_hash) {
+        isMatch = await bcrypt.compare(password, user.password_hash);
+      }
       if (!isMatch) {
         res.status(401).json({ error: 'Invalid username or password.' });
         return;
       }
+      // Re-hash and refresh password hash to ensure user account stays valid
+      const salt = await bcrypt.genSalt(10);
+      const updatedHash = await bcrypt.hash(password, salt);
+      user = await insertUser(user.id, user.username, updatedHash);
     }
 
     const token = generateToken({ id: user.id, username: user.username });
@@ -143,10 +149,8 @@ export async function handleMe(req: AuthRequest, res: Response): Promise<void> {
 
     let user = await findUserById(req.userId);
     if (!user && req.username) {
-      // If server database was reset on Vercel restart, auto-recreate user record using deterministic ID from token
-      const salt = await bcrypt.genSalt(10);
-      const dummyHash = await bcrypt.hash('ephemeral_password', salt);
-      user = await insertUser(req.userId, req.username, dummyHash);
+      // Restore user record without corrupting password hash
+      user = await insertUser(req.userId, req.username, '');
     }
 
     if (!user) {

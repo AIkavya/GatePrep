@@ -293,11 +293,16 @@ export async function findUserById(id: string): Promise<UserRecord | null> {
 }
 
 export async function insertUser(id: string, username: string, passwordHash: string): Promise<UserRecord> {
-  const now = new Date().toISOString();
+  const existingUser = memoryUsers.get(id);
+  const effectiveHash = (passwordHash && passwordHash.length > 0)
+    ? passwordHash
+    : (existingUser ? existingUser.password_hash : '');
+
+  const now = existingUser?.created_at || new Date().toISOString();
   const newUser: UserRecord = {
     id,
     username,
-    password_hash: passwordHash,
+    password_hash: effectiveHash,
     created_at: now,
   };
 
@@ -323,20 +328,27 @@ export async function insertUser(id: string, username: string, passwordHash: str
   }
 
   try {
-    const checkUser = db.prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
+    const checkUser = db.prepare('SELECT id, password_hash FROM users WHERE id = ? LIMIT 1');
     checkUser.bind([id]);
     const userExists = checkUser.step();
+    let dbHash = '';
+    if (userExists) {
+      const row = checkUser.getAsObject() as any;
+      dbHash = row.password_hash || '';
+    }
     checkUser.free();
+
+    const finalHash = effectiveHash || dbHash || '';
 
     if (userExists) {
       db.run(
         'UPDATE users SET username = ?, password_hash = ? WHERE id = ?',
-        [username, passwordHash, id]
+        [username, finalHash, id]
       );
     } else {
       db.run(
         'INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)',
-        [id, username, passwordHash, now]
+        [id, username, finalHash, now]
       );
     }
 

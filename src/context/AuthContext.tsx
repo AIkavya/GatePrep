@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const continueAsGuest = () => {
     const guestUser: AuthUser = { id: 'guest_aspirant', username: 'Guest Aspirant' };
-    const guestToken = 'guest_token_' + Date.now();
+    const guestToken = 'guest_token_permanent';
     setUser(guestUser);
     setToken(guestToken);
     setError(null);
