@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Plus,
   ArrowUp,
@@ -11,11 +11,11 @@ import {
   Filter,
   Check,
   RotateCcw,
-} from 'lucide-react';
-import { useGate } from '../../context/GateContext';
-import { Chapter, ChapterStatus } from '../../types';
-import { StatusBadge } from '../common/Badge';
-import { Modal } from '../common/Modal';
+} from "lucide-react";
+import { useGate } from "../../context/GateContext";
+import { Chapter, ChapterStatus } from "../../types";
+import { StatusBadge } from "../common/Badge";
+import { Modal } from "../common/Modal";
 
 export const LearningPage: React.FC = () => {
   const {
@@ -32,7 +32,9 @@ export const LearningPage: React.FC = () => {
     adjustChapterPriority,
   } = useGate();
 
-  const [activeTabStatus, setActiveTabStatus] = useState<'active' | 'completed'>('active');
+  const [activeTabStatus, setActiveTabStatus] = useState<
+    "active" | "completed"
+  >("active");
 
   // Modal for Add/Edit Chapter
   const [isChapterModalOpen, setIsChapterModalOpen] = useState(false);
@@ -40,13 +42,13 @@ export const LearningPage: React.FC = () => {
 
   // Form states
   const [formSubjectId, setFormSubjectId] = useState<string>(
-    selectedSubjectId !== 'all' ? selectedSubjectId : subjects[0]?.id || ''
+    selectedSubjectId !== "all" ? selectedSubjectId : subjects[0]?.id || "",
   );
-  const [formName, setFormName] = useState('');
+  const [formName, setFormName] = useState("");
   const [formPriority, setFormPriority] = useState(10);
   const [formProgress, setFormProgress] = useState(0);
-  const [formStatus, setFormStatus] = useState<ChapterStatus>('not_started');
-  const [formNotes, setFormNotes] = useState('');
+  const [formStatus, setFormStatus] = useState<ChapterStatus>("not_started");
+  const [formNotes, setFormNotes] = useState("");
 
   // Quick progress adjustment state
   const [inlineProgressId, setInlineProgressId] = useState<string | null>(null);
@@ -54,17 +56,17 @@ export const LearningPage: React.FC = () => {
 
   // Filter chapters by selected subject
   const subjectFilteredChapters = chapters.filter((c) =>
-    selectedSubjectId === 'all' ? true : c.subjectId === selectedSubjectId
+    selectedSubjectId === "all" ? true : c.subjectId === selectedSubjectId,
   );
 
   // Separate into active vs completed
   const activeChapters = subjectFilteredChapters
-    .filter((c) => c.status !== 'completed')
+    .filter((c) => c.status !== "completed")
     .sort((a, b) => b.priority - a.priority);
 
   const completedChapters = subjectFilteredChapters
-    .filter((c) => c.status === 'completed')
-    .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+    .filter((c) => c.status === "completed")
+    .sort((a, b) => (b.completedAt || "").localeCompare(a.completedAt || ""));
 
   // CURRENT chapter is the top priority in active chapters
   const currentChapter = activeChapters[0] || null;
@@ -77,12 +79,18 @@ export const LearningPage: React.FC = () => {
 
   const handleOpenAdd = () => {
     setEditingChapterId(null);
-    setFormSubjectId(selectedSubjectId !== 'all' ? selectedSubjectId : subjects[0]?.id || '');
-    setFormName('');
-    setFormPriority(activeChapters.length > 0 ? Math.max(...activeChapters.map(c => c.priority)) + 1 : 10);
+    setFormSubjectId(
+      selectedSubjectId !== "all" ? selectedSubjectId : subjects[0]?.id || "",
+    );
+    setFormName("");
+    setFormPriority(
+      activeChapters.length > 0
+        ? Math.max(...activeChapters.map((c) => c.priority)) + 1
+        : 10,
+    );
     setFormProgress(0);
-    setFormStatus('not_started');
-    setFormNotes('');
+    setFormStatus("not_started");
+    setFormNotes("");
     setIsChapterModalOpen(true);
   };
 
@@ -93,7 +101,7 @@ export const LearningPage: React.FC = () => {
     setFormPriority(chap.priority);
     setFormProgress(chap.progress);
     setFormStatus(chap.status);
-    setFormNotes(chap.notes || '');
+    setFormNotes(chap.notes || "");
     setIsChapterModalOpen(true);
   };
 
@@ -116,7 +124,7 @@ export const LearningPage: React.FC = () => {
         name: formName.trim(),
         priority: Number(formPriority),
         progress: Number(formProgress),
-        status: formProgress > 0 ? 'in_progress' : formStatus,
+        status: formProgress > 0 ? "in_progress" : formStatus,
         notes: formNotes.trim(),
       });
     }
@@ -132,13 +140,16 @@ export const LearningPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#161617] p-5 rounded-2xl border border-[#e5e5ea] dark:border-[#333336] shadow-2xs transition-colors">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">Active Learning Queue</h1>
+            <h1 className="text-xl font-bold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+              Active Learning Queue
+            </h1>
             <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/60">
               Priority Stack
             </span>
           </div>
           <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1">
-            Highest priority chapters remain at the top. Completed chapters automatically enter the Spaced Revision queue.
+            Highest priority chapters remain at the top. Completed chapters
+            automatically enter the Spaced Revision queue.
           </p>
         </div>
 
@@ -157,11 +168,11 @@ export const LearningPage: React.FC = () => {
       {/* Subject Filter Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
         <button
-          onClick={() => setSelectedSubjectId('all')}
+          onClick={() => setSelectedSubjectId("all")}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
-            selectedSubjectId === 'all'
-              ? 'bg-[#1d1d1f] text-white border-[#1d1d1f] dark:bg-[#f5f5f7] dark:text-black dark:border-[#f5f5f7]'
-              : 'bg-white dark:bg-[#161617] text-[#86868b] dark:text-[#a1a1a6] border-[#e5e5ea] dark:border-[#333336] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+            selectedSubjectId === "all"
+              ? "bg-[#1d1d1f] text-white border-[#1d1d1f] dark:bg-[#f5f5f7] dark:text-black dark:border-[#f5f5f7]"
+              : "bg-white dark:bg-[#161617] text-[#86868b] dark:text-[#a1a1a6] border-[#e5e5ea] dark:border-[#333336] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
           }`}
         >
           All Subjects ({chapters.length})
@@ -175,8 +186,8 @@ export const LearningPage: React.FC = () => {
               onClick={() => setSelectedSubjectId(s.id)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
                 isSelected
-                  ? 'bg-[#0071e3] text-white border-[#0071e3] dark:bg-[#2997ff] dark:text-black dark:border-[#2997ff]'
-                  : 'bg-white dark:bg-[#161617] text-[#86868b] dark:text-[#a1a1a6] border-[#e5e5ea] dark:border-[#333336] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+                  ? "bg-[#0071e3] text-white border-[#0071e3] dark:bg-[#2997ff] dark:text-black dark:border-[#2997ff]"
+                  : "bg-white dark:bg-[#161617] text-[#86868b] dark:text-[#a1a1a6] border-[#e5e5ea] dark:border-[#333336] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
               }`}
             >
               {s.code || s.name} ({count})
@@ -188,28 +199,28 @@ export const LearningPage: React.FC = () => {
       {/* Toggle between Active Study Stack and Completed History */}
       <div className="flex items-center gap-6 border-b border-[#e5e5ea] dark:border-[#333336]">
         <button
-          onClick={() => setActiveTabStatus('active')}
+          onClick={() => setActiveTabStatus("active")}
           className={`pb-2.5 text-xs font-semibold border-b-2 transition-colors ${
-            activeTabStatus === 'active'
-              ? 'border-[#0071e3] text-[#0071e3] dark:border-[#2997ff] dark:text-[#2997ff]'
-              : 'border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+            activeTabStatus === "active"
+              ? "border-[#0071e3] text-[#0071e3] dark:border-[#2997ff] dark:text-[#2997ff]"
+              : "border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
           }`}
         >
           Active Priority Queue ({activeChapters.length})
         </button>
         <button
-          onClick={() => setActiveTabStatus('completed')}
+          onClick={() => setActiveTabStatus("completed")}
           className={`pb-2.5 text-xs font-semibold border-b-2 transition-colors ${
-            activeTabStatus === 'completed'
-              ? 'border-[#0071e3] text-[#0071e3] dark:border-[#2997ff] dark:text-[#2997ff]'
-              : 'border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+            activeTabStatus === "completed"
+              ? "border-[#0071e3] text-[#0071e3] dark:border-[#2997ff] dark:text-[#2997ff]"
+              : "border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
           }`}
         >
           Completed History ({completedChapters.length})
         </button>
       </div>
 
-      {activeTabStatus === 'active' ? (
+      {activeTabStatus === "active" ? (
         <div className="space-y-6">
           {/* CURRENT CHAPTER DISPLAY */}
           <div className="bg-white dark:bg-[#161617] rounded-2xl border-2 border-[#0071e3]/80 dark:border-[#2997ff]/80 p-5 sm:p-6 shadow-sm relative overflow-hidden transition-colors">
@@ -228,7 +239,9 @@ export const LearningPage: React.FC = () => {
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <span
                         className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white"
-                        style={{ backgroundColor: currentSubject?.color || '#0071e3' }}
+                        style={{
+                          backgroundColor: currentSubject?.color || "#0071e3",
+                        }}
                       >
                         {currentSubject?.code || currentSubject?.name}
                       </span>
@@ -250,9 +263,13 @@ export const LearningPage: React.FC = () => {
 
                   {/* Priority Adjusters for Current */}
                   <div className="flex items-center gap-1.5 self-start bg-[#f5f5f7] dark:bg-[#2c2c2e] p-1.5 rounded-xl border border-[#e5e5ea] dark:border-[#3a3a3c]">
-                    <span className="text-[11px] font-semibold text-[#86868b] dark:text-[#a1a1a6] px-1">Priority:</span>
+                    <span className="text-[11px] font-semibold text-[#86868b] dark:text-[#a1a1a6] px-1">
+                      Priority:
+                    </span>
                     <button
-                      onClick={() => adjustChapterPriority(currentChapter.id, -1)}
+                      onClick={() =>
+                        adjustChapterPriority(currentChapter.id, -1)
+                      }
                       className="p-1 rounded hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] text-[#86868b] dark:text-[#a1a1a6]"
                       title="Decrease priority"
                     >
@@ -262,7 +279,9 @@ export const LearningPage: React.FC = () => {
                       {currentChapter.priority}
                     </span>
                     <button
-                      onClick={() => adjustChapterPriority(currentChapter.id, 1)}
+                      onClick={() =>
+                        adjustChapterPriority(currentChapter.id, 1)
+                      }
                       className="p-1 rounded hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c] text-[#86868b] dark:text-[#a1a1a6]"
                       title="Increase priority"
                     >
@@ -289,11 +308,13 @@ export const LearningPage: React.FC = () => {
                       {[0, 25, 50, 75, 90].map((val) => (
                         <button
                           key={val}
-                          onClick={() => updateChapterProgress(currentChapter.id, val)}
+                          onClick={() =>
+                            updateChapterProgress(currentChapter.id, val)
+                          }
                           className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
                             currentChapter.progress === val
-                              ? 'bg-[#0071e3] text-white border-[#0071e3] dark:bg-[#2997ff] dark:text-black dark:border-[#2997ff]'
-                              : 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] border-[#e5e5ea] dark:border-[#3a3a3c] hover:bg-[#f5f5f7] dark:hover:bg-[#3a3a3c]'
+                              ? "bg-[#0071e3] text-white border-[#0071e3] dark:bg-[#2997ff] dark:text-black dark:border-[#2997ff]"
+                              : "bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] border-[#e5e5ea] dark:border-[#3a3a3c] hover:bg-[#f5f5f7] dark:hover:bg-[#3a3a3c]"
                           }`}
                         >
                           {val}%
@@ -324,7 +345,8 @@ export const LearningPage: React.FC = () => {
               </div>
             ) : (
               <div className="py-8 text-center text-[#86868b] dark:text-[#a1a1a6] text-xs">
-                No active chapters in this subject queue. Click &quot;Add Chapter&quot; above to begin.
+                No active chapters in this subject queue. Click &quot;Add
+                Chapter&quot; above to begin.
               </div>
             )}
           </div>
@@ -358,11 +380,15 @@ export const LearningPage: React.FC = () => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
                               className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
-                              style={{ backgroundColor: sub?.color || '#0071e3' }}
+                              style={{
+                                backgroundColor: sub?.color || "#0071e3",
+                              }}
                             >
                               {sub?.code || sub?.name}
                             </span>
-                            <h4 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap.name}</h4>
+                            <h4 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                              {chap.name}
+                            </h4>
                             <StatusBadge status={chap.status} />
                           </div>
                           {chap.notes && (
@@ -386,8 +412,12 @@ export const LearningPage: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-1.5 self-start xs:self-end sm:self-center">
                         {/* Priority Box */}
                         <div className="flex items-center gap-1 bg-[#f5f5f7] dark:bg-[#2c2c2e] px-2.5 py-1 rounded-full text-xs">
-                          <span className="text-[11px] text-[#86868b] dark:text-[#a1a1a6]">P:</span>
-                          <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap.priority}</span>
+                          <span className="text-[11px] text-[#86868b] dark:text-[#a1a1a6]">
+                            P:
+                          </span>
+                          <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                            {chap.priority}
+                          </span>
                           <div className="flex flex-col ml-1">
                             <button
                               onClick={() => adjustChapterPriority(chap.id, 1)}
@@ -406,7 +436,7 @@ export const LearningPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {chap.status === 'not_started' && (
+                        {chap.status === "not_started" && (
                           <button
                             onClick={() => startChapter(chap.id)}
                             className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200/80 dark:border-blue-800/60 transition-colors flex items-center gap-1"
@@ -435,7 +465,9 @@ export const LearningPage: React.FC = () => {
 
                         <button
                           onClick={() => {
-                            if (window.confirm(`Delete chapter "${chap.name}"?`)) {
+                            if (
+                              window.confirm(`Delete chapter "${chap.name}"?`)
+                            ) {
                               deleteChapter(chap.id);
                             }
                           }}
@@ -464,7 +496,8 @@ export const LearningPage: React.FC = () => {
               Completed Chapters ({completedChapters.length})
             </h3>
             <span className="text-xs text-[#86868b] dark:text-[#a1a1a6]">
-              All completed chapters are managed in the Revision spaced-repetition system
+              All completed chapters are managed in the Revision
+              spaced-repetition system
             </span>
           </div>
 
@@ -483,14 +516,16 @@ export const LearningPage: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span
                             className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
-                            style={{ backgroundColor: sub?.color || '#0071e3' }}
+                            style={{ backgroundColor: sub?.color || "#0071e3" }}
                           >
                             {sub?.code || sub?.name}
                           </span>
-                          <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap.name}</span>
+                          <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                            {chap.name}
+                          </span>
                         </div>
                         <p className="text-[11px] text-[#86868b] dark:text-[#a1a1a6] mt-0.5">
-                          Completed on: {chap.completedAt || 'Recently'}
+                          Completed on: {chap.completedAt || "Recently"}
                         </p>
                       </div>
                     </div>
@@ -499,7 +534,10 @@ export const LearningPage: React.FC = () => {
                       <button
                         onClick={() => {
                           // Move back to in_progress
-                          updateChapter(chap.id, { status: 'in_progress', progress: 80 });
+                          updateChapter(chap.id, {
+                            status: "in_progress",
+                            progress: 80,
+                          });
                         }}
                         className="px-3 py-1 text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e] rounded-full border border-[#e5e5ea] dark:border-[#3a3a3c] text-[11px] flex items-center gap-1 transition-colors"
                       >
@@ -508,7 +546,9 @@ export const LearningPage: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm(`Delete chapter "${chap.name}"?`)) {
+                          if (
+                            window.confirm(`Delete chapter "${chap.name}"?`)
+                          ) {
                             deleteChapter(chap.id);
                           }
                         }}
@@ -522,7 +562,8 @@ export const LearningPage: React.FC = () => {
               })
             ) : (
               <div className="py-8 text-center text-[#86868b] dark:text-[#a1a1a6] text-xs">
-                No chapters marked completed yet. Complete a chapter above to initiate automated revisions!
+                No chapters marked completed yet. Complete a chapter above to
+                initiate automated revisions!
               </div>
             )}
           </div>
@@ -533,12 +574,14 @@ export const LearningPage: React.FC = () => {
       <Modal
         isOpen={isChapterModalOpen}
         onClose={() => setIsChapterModalOpen(false)}
-        title={editingChapterId ? 'Edit Chapter' : 'Add Chapter to Queue'}
+        title={editingChapterId ? "Edit Chapter" : "Add Chapter to Queue"}
         subtitle="Chapters are prioritized and ordered dynamically in the study queue"
       >
         <form onSubmit={handleSaveChapter} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">Subject</label>
+            <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+              Subject
+            </label>
             <select
               value={formSubjectId}
               onChange={(e) => setFormSubjectId(e.target.value)}
@@ -600,7 +643,9 @@ export const LearningPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">Status</label>
+            <label className="block text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+              Status
+            </label>
             <select
               value={formStatus}
               onChange={(e) => setFormStatus(e.target.value as ChapterStatus)}
@@ -637,7 +682,7 @@ export const LearningPage: React.FC = () => {
               type="submit"
               className="px-4 py-2 text-xs font-semibold text-white dark:text-black bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff] rounded-full shadow-xs transition-colors"
             >
-              {editingChapterId ? 'Save Changes' : 'Add to Queue'}
+              {editingChapterId ? "Save Changes" : "Add to Queue"}
             </button>
           </div>
         </form>

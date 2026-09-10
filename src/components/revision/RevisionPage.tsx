@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   RotateCcw,
   CheckCircle2,
@@ -19,12 +19,16 @@ import {
   Check,
   ListOrdered,
   CalendarDays,
-} from 'lucide-react';
-import { useGate } from '../../context/GateContext';
-import { Revision } from '../../types';
-import { formatDateDisplay, getTodayDateString, formatShortDate } from '../../utils/dateUtils';
-import { RevisionStatusBadge } from '../common/Badge';
-import { Modal } from '../common/Modal';
+} from "lucide-react";
+import { useGate } from "../../context/GateContext";
+import { Revision } from "../../types";
+import {
+  formatDateDisplay,
+  getTodayDateString,
+  formatShortDate,
+} from "../../utils/dateUtils";
+import { RevisionStatusBadge } from "../common/Badge";
+import { Modal } from "../common/Modal";
 
 export const RevisionPage: React.FC = () => {
   const {
@@ -49,21 +53,23 @@ export const RevisionPage: React.FC = () => {
   const today = getTodayDateString();
 
   // Top view mode: 'queue' (Learning-like priority stack) vs 'schedule' (Date-based views)
-  const [viewMode, setViewMode] = useState<'queue' | 'schedule'>('queue');
-  const [activeFilterTab, setActiveFilterTab] = useState<'today' | 'upcoming' | 'overdue' | 'history'>('today');
+  const [viewMode, setViewMode] = useState<"queue" | "schedule">("queue");
+  const [activeFilterTab, setActiveFilterTab] = useState<
+    "today" | "upcoming" | "overdue" | "history"
+  >("today");
 
   // Add / Edit Revision Modal state
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [editingRevId, setEditingRevId] = useState<string | null>(null);
   const [formSubjectId, setFormSubjectId] = useState<string>(
-    selectedSubjectId !== 'all' ? selectedSubjectId : subjects[0]?.id || ''
+    selectedSubjectId !== "all" ? selectedSubjectId : subjects[0]?.id || "",
   );
-  const [formChapterId, setFormChapterId] = useState<string>('');
+  const [formChapterId, setFormChapterId] = useState<string>("");
   const [formRevNumber, setFormRevNumber] = useState<number>(1);
   const [formDueDate, setFormDueDate] = useState<string>(today);
   const [formPriority, setFormPriority] = useState<number>(10);
   const [formProgress, setFormProgress] = useState<number>(0);
-  const [formNotes, setFormNotes] = useState<string>('');
+  const [formNotes, setFormNotes] = useState<string>("");
 
   // Inline progress adjustment
   const [inlineProgressId, setInlineProgressId] = useState<string | null>(null);
@@ -81,17 +87,23 @@ export const RevisionPage: React.FC = () => {
 
   // Filter revisions by subject
   const subjectFilteredRevisions = revisions.filter((r) =>
-    selectedSubjectId === 'all' ? true : r.subjectId === selectedSubjectId
+    selectedSubjectId === "all" ? true : r.subjectId === selectedSubjectId,
   );
 
   // Active revisions (not completed, not skipped) sorted by priority (highest first)
   const activeQueue = subjectFilteredRevisions
-    .filter((r) => r.status !== 'completed' && r.status !== 'skipped')
-    .sort((a, b) => (b.priority || 10) - (a.priority || 10));
+    .filter((r) => r.status !== "completed" && r.status !== "skipped")
+    .sort(
+      (a, b) =>
+        (b.priority || 10) - (a.priority || 10) ||
+        a.dueDate.localeCompare(b.dueDate),
+    );
 
   const completedRevisions = subjectFilteredRevisions
-    .filter((r) => r.status === 'completed')
-    .sort((a, b) => (b.completedDate || '').localeCompare(a.completedDate || ''));
+    .filter((r) => r.status === "completed")
+    .sort((a, b) =>
+      (b.completedDate || "").localeCompare(a.completedDate || ""),
+    );
 
   // CURRENT Top Priority revision in queue
   const currentRevision = activeQueue[0] || null;
@@ -106,32 +118,51 @@ export const RevisionPage: React.FC = () => {
   const upNextRevisions = activeQueue.slice(1);
 
   // Categorize for schedule view
-  const dueTodayRevisions = subjectFilteredRevisions.filter((r) => r.status === 'due_today');
-  const overdueRevisions = subjectFilteredRevisions.filter((r) => r.status === 'overdue');
+  const dueTodayRevisions = subjectFilteredRevisions.filter(
+    (r) => r.status === "due_today",
+  );
+  const overdueRevisions = subjectFilteredRevisions.filter(
+    (r) => r.status === "overdue",
+  );
   const todayCombined = [...overdueRevisions, ...dueTodayRevisions];
 
   const upcomingRevisions = subjectFilteredRevisions
-    .filter((r) => r.status === 'upcoming')
+    .filter((r) => r.status === "upcoming")
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
   const historyRevisions = subjectFilteredRevisions
-    .filter((r) => r.status === 'completed' || r.status === 'skipped')
-    .sort((a, b) => (b.completedDate || b.dueDate).localeCompare(a.completedDate || a.dueDate));
+    .filter((r) => r.status === "completed" || r.status === "skipped")
+    .sort((a, b) =>
+      (b.completedDate || b.dueDate).localeCompare(
+        a.completedDate || a.dueDate,
+      ),
+    );
 
   // Available chapters for the selected subject in form
   const formChapters = chapters.filter((c) => c.subjectId === formSubjectId);
 
   const handleOpenAddRevision = () => {
     setEditingRevId(null);
-    const subId = selectedSubjectId !== 'all' ? selectedSubjectId : subjects[0]?.id || '';
+    const subId =
+      selectedSubjectId !== "all" ? selectedSubjectId : subjects[0]?.id || "";
     setFormSubjectId(subId);
     const availableChaps = chapters.filter((c) => c.subjectId === subId);
-    setFormChapterId(availableChaps[0]?.id || '');
+    setFormChapterId(availableChaps[0]?.id || "");
     setFormRevNumber(1);
     setFormDueDate(today);
-    setFormPriority(activeQueue.length > 0 ? Math.max(...activeQueue.map((r) => r.priority || 10)) + 1 : 10);
+    setFormPriority(
+      activeQueue.length > 0
+        ? Math.min(
+            20,
+            Math.max(
+              1,
+              Math.max(...activeQueue.map((r) => r.priority || 10)) + 1,
+            ),
+          )
+        : 10,
+    );
     setFormProgress(0);
-    setFormNotes('');
+    setFormNotes("");
     setIsRevisionModalOpen(true);
   };
 
@@ -143,7 +174,7 @@ export const RevisionPage: React.FC = () => {
     setFormDueDate(rev.dueDate);
     setFormPriority(rev.priority || 10);
     setFormProgress(rev.progress || 0);
-    setFormNotes(rev.notes || '');
+    setFormNotes(rev.notes || "");
     setIsRevisionModalOpen(true);
   };
 
@@ -151,14 +182,23 @@ export const RevisionPage: React.FC = () => {
     e.preventDefault();
     if (!formSubjectId || !formChapterId || !formDueDate) return;
 
+    const clampedPriority = Math.min(
+      20,
+      Math.max(1, Number(formPriority) || 10),
+    );
+    const clampedProgress = Math.min(
+      100,
+      Math.max(0, Number(formProgress) || 0),
+    );
+
     if (editingRevId) {
       updateRevision(editingRevId, {
         subjectId: formSubjectId,
         chapterId: formChapterId,
         revisionNumber: Number(formRevNumber),
         dueDate: formDueDate,
-        priority: Number(formPriority),
-        progress: Number(formProgress),
+        priority: clampedPriority,
+        progress: clampedProgress,
         notes: formNotes.trim(),
       });
     } else {
@@ -167,10 +207,10 @@ export const RevisionPage: React.FC = () => {
         chapterId: formChapterId,
         revisionNumber: Number(formRevNumber),
         dueDate: formDueDate,
-        priority: Number(formPriority),
-        progress: Number(formProgress),
+        priority: clampedPriority,
+        progress: clampedProgress,
         notes: formNotes.trim(),
-        status: 'upcoming',
+        status: clampedProgress === 100 ? "completed" : "upcoming",
       });
     }
 
@@ -205,13 +245,16 @@ export const RevisionPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#161617] p-5 rounded-2xl border border-[#e5e5ea] dark:border-[#333336] shadow-2xs transition-colors">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">Revision Management</h1>
+            <h1 className="text-xl font-bold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+              Revision Management
+            </h1>
             <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 dark:bg-red-950/40 text-[#ff3b30] dark:text-[#ff453a] border border-red-200/80 dark:border-red-800/60">
               Manual Scheduling
             </span>
           </div>
           <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1">
-            Prioritize active revisions, adjust progress, and schedule targeted review sessions without auto-scheduling.
+            Prioritize active revisions, adjust progress, and schedule targeted
+            review sessions without auto-scheduling.
           </p>
         </div>
 
@@ -245,11 +288,11 @@ export const RevisionPage: React.FC = () => {
       {/* Subject Filter Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
         <button
-          onClick={() => setSelectedSubjectId('all')}
+          onClick={() => setSelectedSubjectId("all")}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
-            selectedSubjectId === 'all'
-              ? 'bg-[#1d1d1f] text-white dark:bg-white dark:text-black border-transparent shadow-2xs'
-              : 'bg-white dark:bg-[#161617] text-[#86868b] dark:text-[#a1a1a6] border-[#e5e5ea] dark:border-[#333336] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e]'
+            selectedSubjectId === "all"
+              ? "bg-[#1d1d1f] text-white dark:bg-white dark:text-black border-transparent shadow-2xs"
+              : "bg-white dark:bg-[#161617] text-[#86868b] dark:text-[#a1a1a6] border-[#e5e5ea] dark:border-[#333336] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e]"
           }`}
         >
           All Subjects ({revisions.length})
@@ -263,8 +306,8 @@ export const RevisionPage: React.FC = () => {
               onClick={() => setSelectedSubjectId(s.id)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
                 isSelected
-                  ? 'bg-[#0071e3] text-white dark:bg-[#2997ff] dark:text-black border-transparent shadow-2xs'
-                  : 'bg-white dark:bg-[#161617] text-[#86868b] dark:text-[#a1a1a6] border-[#e5e5ea] dark:border-[#333336] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e]'
+                  ? "bg-[#0071e3] text-white dark:bg-[#2997ff] dark:text-black border-transparent shadow-2xs"
+                  : "bg-white dark:bg-[#161617] text-[#86868b] dark:text-[#a1a1a6] border-[#e5e5ea] dark:border-[#333336] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e]"
               }`}
             >
               {s.code || s.name} ({count})
@@ -277,11 +320,11 @@ export const RevisionPage: React.FC = () => {
       <div className="flex items-center justify-between border-b border-[#e5e5ea] dark:border-[#333336] pb-2">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setViewMode('queue')}
+            onClick={() => setViewMode("queue")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              viewMode === 'queue'
-                ? 'bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/60'
-                : 'text-[#86868b] dark:text-[#a1a1a6] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e]'
+              viewMode === "queue"
+                ? "bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/60"
+                : "text-[#86868b] dark:text-[#a1a1a6] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e]"
             }`}
           >
             <ListOrdered className="w-4 h-4" />
@@ -289,11 +332,11 @@ export const RevisionPage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setViewMode('schedule')}
+            onClick={() => setViewMode("schedule")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              viewMode === 'schedule'
-                ? 'bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/60'
-                : 'text-[#86868b] dark:text-[#a1a1a6] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e]'
+              viewMode === "schedule"
+                ? "bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] dark:text-[#2997ff] border border-blue-200/80 dark:border-blue-800/60"
+                : "text-[#86868b] dark:text-[#a1a1a6] hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e]"
             }`}
           >
             <CalendarDays className="w-4 h-4" />
@@ -307,7 +350,7 @@ export const RevisionPage: React.FC = () => {
       </div>
 
       {/* ===================== VIEW 1: PRIORITY QUEUE (LEARNING-LIKE INTERFACE) ===================== */}
-      {viewMode === 'queue' && (
+      {viewMode === "queue" && (
         <div className="space-y-6">
           {/* CURRENT TOP REVISION HERO CARD */}
           {currentRevision ? (
@@ -319,9 +362,11 @@ export const RevisionPage: React.FC = () => {
                   </span>
                   <span
                     className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white"
-                    style={{ backgroundColor: currentSubject?.color || '#ff3b30' }}
+                    style={{
+                      backgroundColor: currentSubject?.color || "#ff3b30",
+                    }}
                   >
-                    {currentSubject?.code || currentSubject?.name || 'Subject'}
+                    {currentSubject?.code || currentSubject?.name || "Subject"}
                   </span>
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-[#ff3b30] dark:text-[#ff453a] border border-red-200/80 dark:border-red-800/60">
                     Rev {currentRevision.revisionNumber}
@@ -338,19 +383,25 @@ export const RevisionPage: React.FC = () => {
 
               <div className="mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
-                  {currentChapter?.name || 'Unknown Chapter'}
+                  {currentChapter?.name || "Unknown Chapter"}
                 </h2>
                 {currentRevision.notes ? (
-                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] max-w-2xl">{currentRevision.notes}</p>
+                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] max-w-2xl">
+                    {currentRevision.notes}
+                  </p>
                 ) : (
-                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] italic">No notes attached to this revision.</p>
+                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] italic">
+                    No notes attached to this revision.
+                  </p>
                 )}
               </div>
 
               {/* Progress Slider and Actions */}
               <div className="bg-[#f5f5f7] dark:bg-[#1d1d1f] p-4 rounded-xl border border-[#e5e5ea] dark:border-[#333336] space-y-3">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-semibold text-[#86868b] dark:text-[#a1a1a6]">Revision Progress</span>
+                  <span className="font-semibold text-[#86868b] dark:text-[#a1a1a6]">
+                    Revision Progress
+                  </span>
                   <span className="font-bold text-[#ff3b30] dark:text-[#ff453a] text-sm">
                     {currentRevision.progress || 0}%
                   </span>
@@ -369,7 +420,7 @@ export const RevisionPage: React.FC = () => {
                       onClick={() =>
                         updateRevisionProgress(
                           currentRevision.id,
-                          Math.min(100, (currentRevision.progress || 0) + 25)
+                          Math.min(100, (currentRevision.progress || 0) + 25),
                         )
                       }
                       className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#ff3b30] dark:text-[#ff453a] hover:opacity-80 rounded-full transition-colors min-h-[32px]"
@@ -380,7 +431,7 @@ export const RevisionPage: React.FC = () => {
                       onClick={() =>
                         updateRevisionProgress(
                           currentRevision.id,
-                          Math.min(100, (currentRevision.progress || 0) + 50)
+                          Math.min(100, (currentRevision.progress || 0) + 50),
                         )
                       }
                       className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#ff3b30] dark:text-[#ff453a] hover:opacity-80 rounded-full transition-colors min-h-[32px]"
@@ -411,9 +462,12 @@ export const RevisionPage: React.FC = () => {
           ) : (
             <div className="bg-white dark:bg-[#161617] rounded-2xl border border-dashed border-[#e5e5ea] dark:border-[#333336] p-8 text-center transition-colors">
               <RotateCcw className="w-10 h-10 text-[#86868b] mx-auto mb-2" />
-              <h3 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">No active revisions in queue</h3>
+              <h3 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                No active revisions in queue
+              </h3>
               <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1 max-w-md mx-auto">
-                All scheduled revisions are complete or none are added yet. Click below to schedule a revision topic.
+                All scheduled revisions are complete or none are added yet.
+                Click below to schedule a revision topic.
               </p>
               <button
                 onClick={handleOpenAddRevision}
@@ -474,14 +528,18 @@ export const RevisionPage: React.FC = () => {
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span
                               className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                              style={{ backgroundColor: sub?.color || '#ff3b30' }}
+                              style={{
+                                backgroundColor: sub?.color || "#ff3b30",
+                              }}
                             >
-                              {sub?.code || sub?.name || 'Subject'}
+                              {sub?.code || sub?.name || "Subject"}
                             </span>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-[#ff3b30] dark:text-[#ff453a] border border-red-200/80 dark:border-red-800/60">
                               Rev {rev.revisionNumber}
                             </span>
-                            <h4 className="text-sm font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap?.name}</h4>
+                            <h4 className="text-sm font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                              {chap?.name}
+                            </h4>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-3 text-xs text-[#86868b] dark:text-[#a1a1a6]">
@@ -491,7 +549,9 @@ export const RevisionPage: React.FC = () => {
                             {rev.notes && (
                               <>
                                 <span>•</span>
-                                <span className="italic max-w-xs truncate">{rev.notes}</span>
+                                <span className="italic max-w-xs truncate">
+                                  {rev.notes}
+                                </span>
                               </>
                             )}
                           </div>
@@ -507,7 +567,9 @@ export const RevisionPage: React.FC = () => {
                               min="0"
                               max="100"
                               value={inlineProgressValue}
-                              onChange={(e) => setInlineProgressValue(Number(e.target.value))}
+                              onChange={(e) =>
+                                setInlineProgressValue(Number(e.target.value))
+                              }
                               className="w-24 accent-[#ff3b30]"
                             />
                             <span className="text-xs font-bold w-9 text-[#1d1d1f] dark:text-[#f5f5f7]">
@@ -515,7 +577,10 @@ export const RevisionPage: React.FC = () => {
                             </span>
                             <button
                               onClick={() => {
-                                updateRevisionProgress(rev.id, inlineProgressValue);
+                                updateRevisionProgress(
+                                  rev.id,
+                                  inlineProgressValue,
+                                );
                                 setInlineProgressId(null);
                               }}
                               className="p-1 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-full"
@@ -555,7 +620,9 @@ export const RevisionPage: React.FC = () => {
 
                         <button
                           onClick={() => {
-                            if (window.confirm('Delete this scheduled revision?')) {
+                            if (
+                              window.confirm("Delete this scheduled revision?")
+                            ) {
                               deleteRevision(rev.id);
                             }
                           }}
@@ -575,16 +642,16 @@ export const RevisionPage: React.FC = () => {
       )}
 
       {/* ===================== VIEW 2: BY DUE DATE SCHEDULE ===================== */}
-      {viewMode === 'schedule' && (
+      {viewMode === "schedule" && (
         <div className="space-y-4">
           {/* Sub tabs for date filters */}
           <div className="flex items-center gap-2 border-b border-[#e5e5ea] dark:border-[#333336] text-xs sm:text-sm font-semibold overflow-x-auto pb-1">
             <button
-              onClick={() => setActiveFilterTab('today')}
+              onClick={() => setActiveFilterTab("today")}
               className={`pb-2 border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
-                activeFilterTab === 'today'
-                  ? 'border-[#ff3b30] text-[#ff3b30] dark:border-[#ff453a] dark:text-[#ff453a]'
-                  : 'border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+                activeFilterTab === "today"
+                  ? "border-[#ff3b30] text-[#ff3b30] dark:border-[#ff453a] dark:text-[#ff453a]"
+                  : "border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
               }`}
             >
               <span>Today&apos;s Revision</span>
@@ -596,11 +663,11 @@ export const RevisionPage: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveFilterTab('upcoming')}
+              onClick={() => setActiveFilterTab("upcoming")}
               className={`pb-2 border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
-                activeFilterTab === 'upcoming'
-                  ? 'border-[#0071e3] text-[#0071e3] dark:border-[#2997ff] dark:text-[#2997ff]'
-                  : 'border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+                activeFilterTab === "upcoming"
+                  ? "border-[#0071e3] text-[#0071e3] dark:border-[#2997ff] dark:text-[#2997ff]"
+                  : "border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
               }`}
             >
               <span>Upcoming</span>
@@ -610,11 +677,11 @@ export const RevisionPage: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveFilterTab('overdue')}
+              onClick={() => setActiveFilterTab("overdue")}
               className={`pb-2 border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
-                activeFilterTab === 'overdue'
-                  ? 'border-[#ff3b30] text-[#ff3b30] dark:border-[#ff453a] dark:text-[#ff453a]'
-                  : 'border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+                activeFilterTab === "overdue"
+                  ? "border-[#ff3b30] text-[#ff3b30] dark:border-[#ff453a] dark:text-[#ff453a]"
+                  : "border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
               }`}
             >
               <span>Overdue</span>
@@ -626,11 +693,11 @@ export const RevisionPage: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveFilterTab('history')}
+              onClick={() => setActiveFilterTab("history")}
               className={`pb-2 border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
-                activeFilterTab === 'history'
-                  ? 'border-[#0071e3] text-[#0071e3] dark:border-[#2997ff] dark:text-[#2997ff]'
-                  : 'border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+                activeFilterTab === "history"
+                  ? "border-[#0071e3] text-[#0071e3] dark:border-[#2997ff] dark:text-[#2997ff]"
+                  : "border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
               }`}
             >
               <span>Completed History</span>
@@ -640,21 +707,21 @@ export const RevisionPage: React.FC = () => {
             </button>
           </div>
 
-          {activeFilterTab === 'today' && (
+          {activeFilterTab === "today" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {todayCombined.length > 0 ? (
                 todayCombined.map((rev) => {
                   const sub = subjects.find((s) => s.id === rev.subjectId);
                   const chap = chapters.find((c) => c.id === rev.chapterId);
-                  const isOverdue = rev.status === 'overdue';
+                  const isOverdue = rev.status === "overdue";
 
                   return (
                     <div
                       key={rev.id}
                       className={`rounded-2xl p-5 border shadow-2xs flex flex-col justify-between transition-all ${
                         isOverdue
-                          ? 'bg-red-50/40 dark:bg-red-950/20 border-red-200/80 dark:border-red-800/50'
-                          : 'bg-white dark:bg-[#161617] border-[#e5e5ea] dark:border-[#333336] hover:border-[#86868b]/40'
+                          ? "bg-red-50/40 dark:bg-red-950/20 border-red-200/80 dark:border-red-800/50"
+                          : "bg-white dark:bg-[#161617] border-[#e5e5ea] dark:border-[#333336] hover:border-[#86868b]/40"
                       }`}
                     >
                       <div>
@@ -662,7 +729,9 @@ export const RevisionPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <span
                               className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white"
-                              style={{ backgroundColor: sub?.color || '#0071e3' }}
+                              style={{
+                                backgroundColor: sub?.color || "#0071e3",
+                              }}
                             >
                               {sub?.code || sub?.name}
                             </span>
@@ -673,8 +742,12 @@ export const RevisionPage: React.FC = () => {
                           <RevisionStatusBadge status={rev.status} />
                         </div>
 
-                        <h3 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap?.name}</h3>
-                        <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1">Due: {formatDateDisplay(rev.dueDate)}</p>
+                        <h3 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                          {chap?.name}
+                        </h3>
+                        <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1">
+                          Due: {formatDateDisplay(rev.dueDate)}
+                        </p>
                       </div>
 
                       <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-[#e5e5ea] dark:border-[#333336]">
@@ -712,7 +785,7 @@ export const RevisionPage: React.FC = () => {
             </div>
           )}
 
-          {activeFilterTab === 'upcoming' && (
+          {activeFilterTab === "upcoming" && (
             <div className="space-y-2">
               {upcomingRevisions.length > 0 ? (
                 upcomingRevisions.map((rev) => {
@@ -726,14 +799,20 @@ export const RevisionPage: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <span
                           className="font-bold px-2 py-0.5 rounded-full text-white text-[11px]"
-                          style={{ backgroundColor: sub?.color || '#0071e3' }}
+                          style={{ backgroundColor: sub?.color || "#0071e3" }}
                         >
                           {sub?.code || sub?.name}
                         </span>
                         <div>
-                          <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap?.name}</span>
-                          <span className="ml-2 text-[#ff3b30] dark:text-[#ff453a] font-semibold">Rev {rev.revisionNumber}</span>
-                          <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6] font-medium">Due {formatDateDisplay(rev.dueDate)}</span>
+                          <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                            {chap?.name}
+                          </span>
+                          <span className="ml-2 text-[#ff3b30] dark:text-[#ff453a] font-semibold">
+                            Rev {rev.revisionNumber}
+                          </span>
+                          <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6] font-medium">
+                            Due {formatDateDisplay(rev.dueDate)}
+                          </span>
                         </div>
                       </div>
 
@@ -762,7 +841,7 @@ export const RevisionPage: React.FC = () => {
             </div>
           )}
 
-          {activeFilterTab === 'overdue' && (
+          {activeFilterTab === "overdue" && (
             <div className="space-y-2">
               {overdueRevisions.length > 0 ? (
                 overdueRevisions.map((rev) => {
@@ -776,14 +855,20 @@ export const RevisionPage: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <span
                           className="font-bold px-2.5 py-0.5 rounded-full text-white text-[11px]"
-                          style={{ backgroundColor: sub?.color || '#ff3b30' }}
+                          style={{ backgroundColor: sub?.color || "#ff3b30" }}
                         >
                           {sub?.code || sub?.name}
                         </span>
                         <div>
-                          <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap?.name}</span>
-                          <span className="ml-2 text-[#ff3b30] dark:text-[#ff453a] font-semibold">Rev {rev.revisionNumber}</span>
-                          <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6] font-medium">Overdue since {formatDateDisplay(rev.dueDate)}</span>
+                          <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                            {chap?.name}
+                          </span>
+                          <span className="ml-2 text-[#ff3b30] dark:text-[#ff453a] font-semibold">
+                            Rev {rev.revisionNumber}
+                          </span>
+                          <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6] font-medium">
+                            Overdue since {formatDateDisplay(rev.dueDate)}
+                          </span>
                         </div>
                       </div>
 
@@ -812,7 +897,7 @@ export const RevisionPage: React.FC = () => {
             </div>
           )}
 
-          {activeFilterTab === 'history' && (
+          {activeFilterTab === "history" && (
             <div className="space-y-2">
               {historyRevisions.length > 0 ? (
                 historyRevisions.map((rev) => {
@@ -826,12 +911,17 @@ export const RevisionPage: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         <div>
-                          <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap?.name}</span>
+                          <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                            {chap?.name}
+                          </span>
                           <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6] font-medium">
                             {sub?.code} • Rev {rev.revisionNumber}
                           </span>
                           <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6]">
-                            Completed on {formatDateDisplay(rev.completedDate || rev.dueDate)}
+                            Completed on{" "}
+                            {formatDateDisplay(
+                              rev.completedDate || rev.dueDate,
+                            )}
                           </span>
                         </div>
                       </div>
@@ -853,7 +943,9 @@ export const RevisionPage: React.FC = () => {
       <Modal
         isOpen={isRevisionModalOpen}
         onClose={() => setIsRevisionModalOpen(false)}
-        title={editingRevId ? 'Edit Revision Schedule' : 'Schedule Revision Topic'}
+        title={
+          editingRevId ? "Edit Revision Schedule" : "Schedule Revision Topic"
+        }
         subtitle="Manually add a revision task to your queue"
       >
         <form onSubmit={handleSaveRevision} className="space-y-4">
@@ -865,8 +957,10 @@ export const RevisionPage: React.FC = () => {
               value={formSubjectId}
               onChange={(e) => {
                 setFormSubjectId(e.target.value);
-                const firstChap = chapters.find((c) => c.subjectId === e.target.value);
-                setFormChapterId(firstChap ? firstChap.id : '');
+                const firstChap = chapters.find(
+                  (c) => c.subjectId === e.target.value,
+                );
+                setFormChapterId(firstChap ? firstChap.id : "");
               }}
               className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0071e3] focus:outline-none"
               required
@@ -947,7 +1041,9 @@ export const RevisionPage: React.FC = () => {
                 className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0071e3] focus:outline-none"
                 required
               />
-              <span className="text-[10px] text-[#86868b] dark:text-[#a1a1a6]">Higher number = top priority</span>
+              <span className="text-[10px] text-[#86868b] dark:text-[#a1a1a6]">
+                Higher number = top priority
+              </span>
             </div>
 
             <div>
@@ -990,7 +1086,7 @@ export const RevisionPage: React.FC = () => {
               type="submit"
               className="px-4 py-2 text-xs font-semibold text-white dark:text-black bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff] rounded-full shadow-xs"
             >
-              {editingRevId ? 'Save Changes' : 'Add to Revision Queue'}
+              {editingRevId ? "Save Changes" : "Add to Revision Queue"}
             </button>
           </div>
         </form>
@@ -1055,7 +1151,9 @@ export const RevisionPage: React.FC = () => {
                 className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0071e3] focus:outline-none"
                 required
               />
-              <span className="text-xs font-medium text-[#86868b] dark:text-[#a1a1a6] shrink-0">days</span>
+              <span className="text-xs font-medium text-[#86868b] dark:text-[#a1a1a6] shrink-0">
+                days
+              </span>
             </div>
           </div>
 
@@ -1073,7 +1171,9 @@ export const RevisionPage: React.FC = () => {
                 className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0071e3] focus:outline-none"
                 required
               />
-              <span className="text-xs font-medium text-[#86868b] dark:text-[#a1a1a6] shrink-0">days</span>
+              <span className="text-xs font-medium text-[#86868b] dark:text-[#a1a1a6] shrink-0">
+                days
+              </span>
             </div>
           </div>
 
@@ -1091,7 +1191,9 @@ export const RevisionPage: React.FC = () => {
                 className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0071e3] focus:outline-none"
                 required
               />
-              <span className="text-xs font-medium text-[#86868b] dark:text-[#a1a1a6] shrink-0">days</span>
+              <span className="text-xs font-medium text-[#86868b] dark:text-[#a1a1a6] shrink-0">
+                days
+              </span>
             </div>
           </div>
 

@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { Lock, User, Eye, EyeOff, ShieldCheck, Database, Layers, CheckCircle2, ArrowRight } from 'lucide-react';
+import React, { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import {
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Database,
+  Layers,
+  CheckCircle2,
+  ArrowRight,
+} from "lucide-react";
 
 export const AuthScreen: React.FC = () => {
   const { login, register, continueAsGuest, error } = useAuth();
   const [isSignUp, setIsSignUp] = useState<boolean>(false);
-  const [username, setUsername] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -16,22 +26,22 @@ export const AuthScreen: React.FC = () => {
     setLocalError(null);
 
     if (!username.trim()) {
-      setLocalError('Please enter a username.');
+      setLocalError("Please enter a username.");
       return;
     }
 
     if (username.trim().length < 3) {
-      setLocalError('Username must be at least 3 characters.');
+      setLocalError("Username must be at least 3 characters.");
       return;
     }
 
     if (!password) {
-      setLocalError('Please enter a password.');
+      setLocalError("Please enter a password.");
       return;
     }
 
     if (password.length < 4) {
-      setLocalError('Password must be at least 4 characters.');
+      setLocalError("Password must be at least 4 characters.");
       return;
     }
 
@@ -43,15 +53,17 @@ export const AuthScreen: React.FC = () => {
         await login(username.trim(), password);
       }
     } catch (err: any) {
-      setLocalError(err.message || (isSignUp ? 'Registration failed.' : 'Login failed.'));
+      setLocalError(
+        err.message || (isSignUp ? "Registration failed." : "Login failed."),
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleQuickDemo = async () => {
-    const demoUser = 'gate_aspirant';
-    const demoPass = 'gate2026';
+    const demoUser = "gate_aspirant";
+    const demoPass = "gate2026";
     setUsername(demoUser);
     setPassword(demoPass);
     setSubmitting(true);
@@ -85,7 +97,8 @@ export const AuthScreen: React.FC = () => {
             GATE Prep
           </h1>
           <p className="text-xs sm:text-sm text-[#86868b] dark:text-[#a1a1a6] mt-1.5 max-w-xs mx-auto">
-            Lightweight SQLite database &amp; JWT authentication for your personalized syllabus and exam tracking.
+            Lightweight SQLite database &amp; JWT authentication for your
+            personalized syllabus and exam tracking.
           </p>
         </div>
 
@@ -102,8 +115,8 @@ export const AuthScreen: React.FC = () => {
               }}
               className={`flex-1 py-2 text-xs font-semibold rounded-full transition-all ${
                 !isSignUp
-                  ? 'bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-white shadow-2xs'
-                  : 'text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
+                  ? "bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-white shadow-2xs"
+                  : "text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white"
               }`}
             >
               Sign In
@@ -117,8 +130,8 @@ export const AuthScreen: React.FC = () => {
               }}
               className={`flex-1 py-2 text-xs font-semibold rounded-full transition-all ${
                 isSignUp
-                  ? 'bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-white shadow-2xs'
-                  : 'text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white'
+                  ? "bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-white shadow-2xs"
+                  : "text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white"
               }`}
             >
               Create Account
@@ -130,7 +143,9 @@ export const AuthScreen: React.FC = () => {
             <div className="mb-5 p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/40 text-xs text-[#0071e3] dark:text-[#2997ff] flex items-start gap-2.5">
               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold">Fresh clean start:</span> New accounts start completely clean with 0 items, ready for you to add your 10+ subjects and 10,000+ PYQs.
+                <span className="font-bold">Fresh clean start:</span> New
+                accounts start completely clean with 0 items, ready for you to
+                add your 10+ subjects and 10,000+ PYQs.
               </div>
             </div>
           )}
@@ -182,8 +197,8 @@ export const AuthScreen: React.FC = () => {
                 </div>
                 <input
                   id="input-auth-password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -195,7 +210,11 @@ export const AuthScreen: React.FC = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -210,7 +229,11 @@ export const AuthScreen: React.FC = () => {
                 <div className="w-5 h-5 border-2 border-white dark:border-black border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>{isSignUp ? 'Create Fresh Account' : 'Sign In & Access Dashboard'}</span>
+                  <span>
+                    {isSignUp
+                      ? "Create Fresh Account"
+                      : "Sign In & Access Dashboard"}
+                  </span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

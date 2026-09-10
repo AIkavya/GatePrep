@@ -1,11 +1,19 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api, AuthUser, getStoredToken, getStoredUser, setStoredToken, clearStoredAuth } from '../services/api';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import {
+  api,
+  AuthUser,
+  getStoredToken,
+  getStoredUser,
+  setStoredToken,
+  clearStoredAuth,
+} from "../services/api";
 
 interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
   error: string | null;
+  clearError: () => void;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   continueAsGuest: () => void;
@@ -15,7 +23,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
   const [token, setToken] = useState<string | null>(() => getStoredToken());
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -30,8 +40,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      if (storedToken.startsWith('guest_token_')) {
-        const storedUser = getStoredUser() || { id: 'guest_aspirant', username: 'Guest Aspirant' };
+      if (storedToken.startsWith("guest_token_")) {
+        const storedUser = getStoredUser() || {
+          id: "guest_aspirant",
+          username: "Guest Aspirant",
+        };
         setUser(storedUser);
         setToken(storedToken);
         setIsLoading(false);
@@ -43,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(res.user);
         setToken(storedToken);
       } catch (err) {
-        console.warn('Stored token is invalid or expired:', err);
+        console.warn("Stored token is invalid or expired:", err);
         clearStoredAuth();
         setUser(null);
         setToken(null);
@@ -63,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(res.user);
       setToken(res.token);
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err.message || "Login failed. Please check your credentials.");
       throw err;
     } finally {
       setIsLoading(false);
@@ -78,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(res.user);
       setToken(res.token);
     } catch (err: any) {
-      setError(err.message || 'Registration failed.');
+      setError(err.message || "Registration failed.");
       throw err;
     } finally {
       setIsLoading(false);
@@ -86,12 +99,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const continueAsGuest = () => {
-    const guestUser: AuthUser = { id: 'guest_aspirant', username: 'Guest Aspirant' };
-    const guestToken = 'guest_token_permanent';
+    const guestUser: AuthUser = {
+      id: "guest_aspirant",
+      username: "Guest Aspirant",
+    };
+    const guestToken = "guest_token_permanent";
     setUser(guestUser);
     setToken(guestToken);
     setError(null);
     setStoredToken(guestToken, guestUser);
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   const logout = () => {
@@ -108,6 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoading,
         error,
+        clearError,
         login,
         register,
         continueAsGuest,
@@ -123,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

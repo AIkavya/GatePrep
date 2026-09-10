@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
 import {
   Subject,
   Chapter,
@@ -15,18 +22,25 @@ import {
   PyqQueueItem,
   Exam,
   AppTheme,
-} from '../types';
-import { getInitialSeedData, DEFAULT_REVISION_SETTINGS } from '../data/seedData';
-import { getTodayDateString, addDays, getRevisionStatus } from '../utils/dateUtils';
-import { useAuth } from './AuthContext';
-import { api } from '../services/api';
+} from "../types";
+import {
+  getInitialSeedData,
+  DEFAULT_REVISION_SETTINGS,
+} from "../data/seedData";
+import {
+  getTodayDateString,
+  addDays,
+  getRevisionStatus,
+} from "../utils/dateUtils";
+import { useAuth } from "./AuthContext";
+import { api } from "../services/api";
 
 interface GateContextType {
   // Navigation & global filter
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
-  selectedSubjectId: SubjectId | 'all';
-  setSelectedSubjectId: (id: SubjectId | 'all') => void;
+  selectedSubjectId: SubjectId | "all";
+  setSelectedSubjectId: (id: SubjectId | "all") => void;
 
   // Data
   subjects: Subject[];
@@ -38,24 +52,34 @@ interface GateContextType {
   exams: Exam[];
   revisionSettings: RevisionSettings;
   isInitialized: boolean;
-  syncStatus: 'synced' | 'saving' | 'error';
+  syncStatus: "synced" | "saving" | "error";
 
   // Subject Actions
-  addSubject: (subject: Omit<Subject, 'id'>) => Subject;
+  addSubject: (subject: Omit<Subject, "id">) => Subject;
   updateSubject: (id: SubjectId, updates: Partial<Subject>) => void;
   deleteSubject: (id: SubjectId) => void;
   getChapterRevisionCount: (chapterId: ChapterId) => number;
-  getChapterPyqStats: (chapterId: ChapterId) => { solved: number; fullCycles: number };
-  getSubjectRevisionCount: (subjectId: SubjectId) => { completed: number; total: number };
+  getChapterPyqStats: (chapterId: ChapterId) => {
+    solved: number;
+    fullCycles: number;
+  };
+  getSubjectRevisionCount: (subjectId: SubjectId) => {
+    completed: number;
+    total: number;
+  };
   getSubjectEntirePyqCount: (subjectId: SubjectId) => number;
   getSubjectTestsCount: (subjectId: SubjectId) => number;
 
   // Chapter Actions
-  addChapter: (chapter: Omit<Chapter, 'id' | 'createdAt'>) => Chapter;
+  addChapter: (chapter: Omit<Chapter, "id" | "createdAt">) => Chapter;
   updateChapter: (id: ChapterId, updates: Partial<Chapter>) => void;
   updateChapterMetrics: (
     chapterId: ChapterId,
-    metrics: { revisionCount?: number; pyqsSolvedCount?: number; pyqFullCyclesCount?: number }
+    metrics: {
+      revisionCount?: number;
+      pyqsSolvedCount?: number;
+      pyqFullCyclesCount?: number;
+    },
   ) => void;
   deleteChapter: (id: ChapterId) => void;
   startChapter: (id: ChapterId) => void;
@@ -64,7 +88,7 @@ interface GateContextType {
   adjustChapterPriority: (id: ChapterId, delta: number) => void;
 
   // Revision Actions (Manual scheduling, no auto-schedules)
-  addRevision: (revision: Omit<Revision, 'id'>) => Revision;
+  addRevision: (revision: Omit<Revision, "id">) => Revision;
   updateRevision: (id: RevisionId, updates: Partial<Revision>) => void;
   deleteRevision: (id: RevisionId) => void;
   completeRevision: (id: RevisionId) => void;
@@ -76,27 +100,36 @@ interface GateContextType {
   updateRevisionSettings: (settings: RevisionSettings) => void;
 
   // PYQ Question Bank Actions
-  addPyq: (pyq: Omit<PYQ, 'id'>) => PYQ;
+  addPyq: (pyq: Omit<PYQ, "id">) => PYQ;
   updatePyq: (id: PyqId, updates: Partial<PYQ>) => void;
   deletePyq: (id: PyqId) => void;
-  updatePyqStatus: (id: PyqId, status: PYQ['status']) => void;
+  updatePyqStatus: (id: PyqId, status: PYQ["status"]) => void;
 
   // PYQ Practice Queue Actions (Learning-like priority queue)
-  addPyqQueueItem: (item: Omit<PyqQueueItem, 'id' | 'createdAt'>) => PyqQueueItem;
+  addPyqQueueItem: (
+    item: Omit<PyqQueueItem, "id" | "createdAt">,
+  ) => PyqQueueItem;
   updatePyqQueueItem: (id: string, updates: Partial<PyqQueueItem>) => void;
   deletePyqQueueItem: (id: string) => void;
   startPyqQueueItem: (id: string) => void;
   completePyqQueueItem: (id: string) => void;
   adjustPyqQueuePriority: (id: string, delta: number) => void;
-  updatePyqQueueProgress: (id: string, progress: number, solvedCount?: number) => void;
+  updatePyqQueueProgress: (
+    id: string,
+    progress: number,
+    solvedCount?: number,
+  ) => void;
 
   // Calendar Actions
-  addCalendarEvent: (event: Omit<CalendarEvent, 'id'>) => CalendarEvent;
-  updateCalendarEvent: (id: CalendarEventId, updates: Partial<CalendarEvent>) => void;
+  addCalendarEvent: (event: Omit<CalendarEvent, "id">) => CalendarEvent;
+  updateCalendarEvent: (
+    id: CalendarEventId,
+    updates: Partial<CalendarEvent>,
+  ) => void;
   deleteCalendarEvent: (id: CalendarEventId) => void;
 
   // Exam Actions
-  addExam: (exam: Omit<Exam, 'id' | 'createdAt'>) => Exam;
+  addExam: (exam: Omit<Exam, "id" | "createdAt">) => Exam;
   updateExam: (id: string, updates: Partial<Exam>) => void;
   deleteExam: (id: string) => void;
 
@@ -113,22 +146,29 @@ interface GateContextType {
 
 const GateContext = createContext<GateContextType | undefined>(undefined);
 
-export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const GateProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const { user, isAuthenticated } = useAuth();
 
   const [theme, setThemeState] = useState<AppTheme>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('gate_prep_theme');
-      if (saved === 'dark' || saved === 'light') return saved;
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("gate_prep_theme");
+      if (saved === "dark" || saved === "light") return saved;
+      if (
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+      ) {
+        return "dark";
       }
     }
-    return 'light';
+    return "light";
   });
 
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [selectedSubjectId, setSelectedSubjectId] = useState<SubjectId | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<SubjectId | "all">(
+    "all",
+  );
 
   // Fresh by default: 0 items for new users/fresh install
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -138,14 +178,24 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pyqQueue, setPyqQueue] = useState<PyqQueueItem[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
-  const [revisionSettings, setRevisionSettings] = useState<RevisionSettings>(DEFAULT_REVISION_SETTINGS);
+  const [revisionSettings, setRevisionSettings] = useState<RevisionSettings>(
+    DEFAULT_REVISION_SETTINGS,
+  );
   const [isInitialized, setIsInitialized] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'synced' | 'saving' | 'error'>('synced');
+  const [syncStatus, setSyncStatus] = useState<"synced" | "saving" | "error">(
+    "synced",
+  );
 
   const saveTimerRef = useRef<any>(null);
 
   // Initialize data for the authenticated user from the SQLite database
   useEffect(() => {
+    // Clear any pending save timer from prior sessions
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
     if (!isAuthenticated || !user) {
       setIsInitialized(false);
       setSubjects([]);
@@ -155,9 +205,13 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPyqQueue([]);
       setCalendarEvents([]);
       setExams([]);
+      setSelectedSubjectId("all");
+      setSyncStatus("synced");
       return;
     }
 
+    // Immediately flag as not initialized until fresh user's data is loaded
+    setIsInitialized(false);
     let isMounted = true;
     const userCacheKey = `gate_prep_user_data_${user.id}`;
 
@@ -177,61 +231,25 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setPyqQueue(cachedParsed.pyqQueue || []);
               setCalendarEvents(cachedParsed.calendarEvents || []);
               setExams(cachedParsed.exams || []);
-              if (cachedParsed.revisionSettings) setRevisionSettings(cachedParsed.revisionSettings);
+              if (cachedParsed.revisionSettings)
+                setRevisionSettings(cachedParsed.revisionSettings);
             }
           } catch (e) {
-            console.warn('Failed parsing cached study data');
+            console.warn("Failed parsing cached study data");
           }
         }
 
         // For guest aspirant or offline mode, local optimistic cache is sufficient
-        if (user.id === 'guest_aspirant') {
+        if (user.id === "guest_aspirant") {
           setIsInitialized(true);
-          setSyncStatus('synced');
+          setSyncStatus("synced");
           return;
         }
 
         // Fetch study data from server database
-        const remoteData = await api.study.getData();
-        if (isMounted && remoteData) {
-          const isRemoteEmpty =
-            (!remoteData.subjects || remoteData.subjects.length === 0) &&
-            (!remoteData.chapters || remoteData.chapters.length === 0) &&
-            (!remoteData.revisions || remoteData.revisions.length === 0);
-
-          const isCachedNotEmpty =
-            cachedParsed &&
-            ((cachedParsed.subjects && cachedParsed.subjects.length > 0) ||
-              (cachedParsed.chapters && cachedParsed.chapters.length > 0) ||
-              (cachedParsed.revisions && cachedParsed.revisions.length > 0));
-
-          if (isRemoteEmpty && isCachedNotEmpty) {
-            // Server database was reset on Vercel restart - restore client cached study data and re-sync to server
-            setSubjects(cachedParsed.subjects || []);
-            setChapters(cachedParsed.chapters || []);
-            setRevisions(cachedParsed.revisions || []);
-            setPyqs(cachedParsed.pyqs || []);
-            setPyqQueue(cachedParsed.pyqQueue || []);
-            setCalendarEvents(cachedParsed.calendarEvents || []);
-            setExams(cachedParsed.exams || []);
-            if (cachedParsed.revisionSettings) {
-              setRevisionSettings(cachedParsed.revisionSettings);
-            }
-
-            api.study
-              .saveData({
-                subjects: cachedParsed.subjects || [],
-                chapters: cachedParsed.chapters || [],
-                revisions: cachedParsed.revisions || [],
-                pyqs: cachedParsed.pyqs || [],
-                pyqQueue: cachedParsed.pyqQueue || [],
-                calendarEvents: cachedParsed.calendarEvents || [],
-                exams: cachedParsed.exams || [],
-                revisionSettings: cachedParsed.revisionSettings || DEFAULT_REVISION_SETTINGS,
-              })
-              .catch((err) => console.warn('Re-syncing cached data to server failed:', err));
-          } else {
-            // Use server data
+        try {
+          const remoteData = await api.study.getData();
+          if (isMounted && remoteData) {
             setSubjects(remoteData.subjects || []);
             setChapters(remoteData.chapters || []);
             setRevisions(remoteData.revisions || []);
@@ -242,14 +260,30 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (remoteData.revisionSettings) {
               setRevisionSettings(remoteData.revisionSettings);
             }
-
             localStorage.setItem(userCacheKey, JSON.stringify(remoteData));
+            setSyncStatus("synced");
           }
-
-          setSyncStatus('synced');
+        } catch (fetchErr) {
+          console.warn(
+            "Could not reach server database, falling back to local cache:",
+            fetchErr,
+          );
+          if (isMounted && cachedParsed) {
+            setSubjects(cachedParsed.subjects || []);
+            setChapters(cachedParsed.chapters || []);
+            setRevisions(cachedParsed.revisions || []);
+            setPyqs(cachedParsed.pyqs || []);
+            setPyqQueue(cachedParsed.pyqQueue || []);
+            setCalendarEvents(cachedParsed.calendarEvents || []);
+            setExams(cachedParsed.exams || []);
+            if (cachedParsed.revisionSettings) {
+              setRevisionSettings(cachedParsed.revisionSettings);
+            }
+          }
+          setSyncStatus("synced");
         }
       } catch (err) {
-        console.error('Error loading study data from server database:', err);
+        console.error("Error loading study data from server database:", err);
       } finally {
         if (isMounted) {
           setIsInitialized(true);
@@ -266,14 +300,14 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync Theme with DOM and localStorage
   useEffect(() => {
-    if (typeof document !== 'undefined') {
+    if (typeof document !== "undefined") {
       const root = document.documentElement;
-      if (theme === 'dark') {
-        root.classList.add('dark');
+      if (theme === "dark") {
+        root.classList.add("dark");
       } else {
-        root.classList.remove('dark');
+        root.classList.remove("dark");
       }
-      localStorage.setItem('gate_prep_theme', theme);
+      localStorage.setItem("gate_prep_theme", theme);
     }
   }, [theme]);
 
@@ -282,8 +316,29 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
   };
+
+  // Recalculate revision statuses against today whenever revisions or today changes
+  const computedRevisions = useMemo(() => {
+    const today = getTodayDateString();
+    return revisions.map((rev) => {
+      const updatedStatus = getRevisionStatus(
+        rev.dueDate,
+        rev.status === "completed",
+        rev.status === "skipped",
+        today,
+      );
+      if (
+        rev.status !== updatedStatus &&
+        rev.status !== "completed" &&
+        rev.status !== "skipped"
+      ) {
+        return { ...rev, status: updatedStatus };
+      }
+      return rev;
+    });
+  }, [revisions]);
 
   // Sync to SQLite database whenever study data changes
   useEffect(() => {
@@ -292,7 +347,7 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const dataToSave = {
       subjects,
       chapters,
-      revisions,
+      revisions: computedRevisions,
       pyqs,
       pyqQueue,
       calendarEvents,
@@ -305,22 +360,22 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(userCacheKey, JSON.stringify(dataToSave));
 
     // Debounced sync to SQLite backend
-    setSyncStatus('saving');
+    setSyncStatus("saving");
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
     }
 
     saveTimerRef.current = setTimeout(async () => {
-      if (user.id === 'guest_aspirant') {
-        setSyncStatus('synced');
+      if (user.id === "guest_aspirant") {
+        setSyncStatus("synced");
         return;
       }
       try {
         await api.study.saveData(dataToSave);
-        setSyncStatus('synced');
+        setSyncStatus("synced");
       } catch (e) {
-        console.error('Failed to sync changes to database:', e);
-        setSyncStatus('error');
+        console.error("Failed to sync changes to database:", e);
+        setSyncStatus("error");
       }
     }, 600);
 
@@ -329,10 +384,26 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [subjects, chapters, revisions, pyqs, pyqQueue, calendarEvents, exams, revisionSettings, isInitialized, isAuthenticated, user]);
+  }, [
+    subjects,
+    chapters,
+    revisions,
+    pyqs,
+    pyqQueue,
+    calendarEvents,
+    exams,
+    revisionSettings,
+    isInitialized,
+    isAuthenticated,
+    user,
+  ]);
 
   // Reset to clean, completely fresh workspace with 0 data
   const resetFreshWorkspace = async () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
     setSubjects([]);
     setChapters([]);
     setRevisions([]);
@@ -340,6 +411,7 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPyqQueue([]);
     setCalendarEvents([]);
     setExams([]);
+    setSelectedSubjectId("all");
     setRevisionSettings(DEFAULT_REVISION_SETTINGS);
 
     if (user) {
@@ -347,19 +419,19 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      setSyncStatus('saving');
+      setSyncStatus("saving");
       await api.study.resetData();
-      setSyncStatus('synced');
+      setSyncStatus("synced");
     } catch (e) {
-      console.error('Failed resetting workspace in database:', e);
-      setSyncStatus('error');
+      console.error("Failed resetting workspace in database:", e);
+      setSyncStatus("error");
     }
   };
 
   // Optional: Import standard GATE CS Syllabus template
   const importSyllabusTemplate = async () => {
     try {
-      setSyncStatus('saving');
+      setSyncStatus("saving");
       const res = await api.study.importTemplate();
       if (res && res.data) {
         setSubjects(res.data.subjects || []);
@@ -370,10 +442,10 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCalendarEvents(res.data.calendarEvents || []);
         setExams(res.data.exams || []);
       }
-      setSyncStatus('synced');
+      setSyncStatus("synced");
     } catch (e) {
-      console.error('Failed importing syllabus template:', e);
-      setSyncStatus('error');
+      console.error("Failed importing syllabus template:", e);
+      setSyncStatus("error");
     }
   };
 
@@ -381,33 +453,25 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     importSyllabusTemplate();
   };
 
-  // Recalculate revision statuses against today whenever revisions or today changes
-  const computedRevisions = revisions.map((rev) => {
-    const today = getTodayDateString();
-    const updatedStatus = getRevisionStatus(
-      rev.dueDate,
-      rev.status === 'completed',
-      rev.status === 'skipped',
-      today
-    );
-    if (rev.status !== updatedStatus && rev.status !== 'completed' && rev.status !== 'skipped') {
-      return { ...rev, status: updatedStatus };
-    }
-    return rev;
-  });
+  // Entity ID Generator with timestamp and random entropy to prevent PK collisions
+  const generateEntityId = (prefix: string): string => {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  };
 
   // --- SUBJECT ACTIONS ---
-  const addSubject = (subjectData: Omit<Subject, 'id'>): Subject => {
+  const addSubject = (subjectData: Omit<Subject, "id">): Subject => {
     const newSub: Subject = {
       ...subjectData,
-      id: `sub-${Date.now()}`,
+      id: generateEntityId("sub"),
     };
     setSubjects((prev) => [...prev, newSub]);
     return newSub;
   };
 
   const updateSubject = (id: SubjectId, updates: Partial<Subject>) => {
-    setSubjects((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+    setSubjects((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+    );
   };
 
   const deleteSubject = (id: SubjectId) => {
@@ -417,47 +481,61 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPyqs((prev) => prev.filter((p) => p.subjectId !== id));
     setPyqQueue((prev) => prev.filter((pq) => pq.subjectId !== id));
     setCalendarEvents((prev) => prev.filter((ce) => ce.subjectId !== id));
+    setExams((prev) => prev.filter((e) => e.subjectId !== id));
     if (selectedSubjectId === id) {
-      setSelectedSubjectId('all');
+      setSelectedSubjectId("all");
     }
   };
 
   // Chapter-wise & Subject-wise metrics count getters
   const getChapterRevisionCount = (chapterId: ChapterId): number => {
     const chap = chapters.find((c) => c.id === chapterId);
-    if (chap && chap.revisionCount !== undefined) {
-      return chap.revisionCount;
-    }
-    return revisions.filter((r) => r.chapterId === chapterId && r.status === 'completed').length;
+    const completedRevs = revisions.filter(
+      (r) => r.chapterId === chapterId && r.status === "completed",
+    ).length;
+    return Math.max(chap?.revisionCount ?? 0, completedRevs);
   };
 
-  const getChapterPyqStats = (chapterId: ChapterId): { solved: number; fullCycles: number } => {
+  const getChapterPyqStats = (
+    chapterId: ChapterId,
+  ): { solved: number; fullCycles: number } => {
     const chap = chapters.find((c) => c.id === chapterId);
     const solvedFromPyqs = pyqs.filter(
-      (p) => p.chapterId === chapterId && (p.status === 'correct' || p.status === 'wrong')
+      (p) =>
+        p.chapterId === chapterId &&
+        (p.status === "correct" || p.status === "wrong"),
     ).length;
-    const solved = chap?.pyqsSolvedCount !== undefined ? chap.pyqsSolvedCount : solvedFromPyqs;
+    const solved = Math.max(chap?.pyqsSolvedCount ?? 0, solvedFromPyqs);
     const fullCycles = chap?.pyqFullCyclesCount ?? 0;
     return { solved, fullCycles };
   };
 
-  const getSubjectRevisionCount = (subjectId: SubjectId): { completed: number; total: number } => {
+  const getSubjectRevisionCount = (
+    subjectId: SubjectId,
+  ): { completed: number; total: number } => {
     const sub = subjects.find((s) => s.id === subjectId);
     const subRevs = revisions.filter((r) => r.subjectId === subjectId);
     const subChaps = chapters.filter((c) => c.subjectId === subjectId);
-    const chapRevsSum = subChaps.reduce((acc, c) => acc + (c.revisionCount ?? 0), 0);
-
-    if (sub && sub.totalRevisionsCount !== undefined) {
-      return {
-        completed: sub.totalRevisionsCount,
-        total: Math.max(sub.totalRevisionsCount, subRevs.length, chapRevsSum),
-      };
-    }
-
-    const completedRevs = subRevs.filter((r) => r.status === 'completed').length;
+    const chapRevsSum = subChaps.reduce(
+      (acc, c) => acc + (c.revisionCount ?? 0),
+      0,
+    );
+    const completedRevs = subRevs.filter(
+      (r) => r.status === "completed",
+    ).length;
+    const effectiveCompleted = Math.max(
+      sub?.totalRevisionsCount ?? 0,
+      completedRevs,
+      chapRevsSum,
+    );
+    const effectiveTotal = Math.max(
+      effectiveCompleted,
+      subRevs.length,
+      chapRevsSum,
+    );
     return {
-      completed: Math.max(completedRevs, chapRevsSum),
-      total: Math.max(subRevs.length, chapRevsSum),
+      completed: effectiveCompleted,
+      total: effectiveTotal,
     };
   };
 
@@ -476,11 +554,13 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // --- CHAPTER ACTIONS (NO AUTO-SCHEDULE ON COMPLETION) ---
-  const addChapter = (chapterData: Omit<Chapter, 'id' | 'createdAt'>): Chapter => {
+  const addChapter = (
+    chapterData: Omit<Chapter, "id" | "createdAt">,
+  ): Chapter => {
     const today = getTodayDateString();
     const newChap: Chapter = {
       ...chapterData,
-      id: `chap-${Date.now()}`,
+      id: generateEntityId("chap"),
       createdAt: today,
     };
     setChapters((prev) => [...prev, newChap]);
@@ -492,13 +572,17 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
       prev.map((c) => {
         if (c.id !== id) return c;
         return { ...c, ...updates };
-      })
+      }),
     );
   };
 
   const updateChapterMetrics = (
     chapterId: ChapterId,
-    metrics: { revisionCount?: number; pyqsSolvedCount?: number; pyqFullCyclesCount?: number }
+    metrics: {
+      revisionCount?: number;
+      pyqsSolvedCount?: number;
+      pyqFullCyclesCount?: number;
+    },
   ) => {
     setChapters((prev) =>
       prev.map((c) => {
@@ -518,7 +602,7 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ? Math.max(0, metrics.pyqFullCyclesCount)
               : c.pyqFullCyclesCount,
         };
-      })
+      }),
     );
   };
 
@@ -528,13 +612,20 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPyqs((prev) => prev.filter((p) => p.chapterId !== id));
     setPyqQueue((prev) => prev.filter((pq) => pq.chapterId !== id));
     setCalendarEvents((prev) => prev.filter((ce) => ce.chapterId !== id));
+    setExams((prev) =>
+      prev.map((e) =>
+        e.chapterId === id ? { ...e, chapterId: undefined } : e,
+      ),
+    );
   };
 
   const startChapter = (id: ChapterId) => {
     setChapters((prev) =>
       prev.map((c) =>
-        c.id === id ? { ...c, status: 'in_progress', progress: Math.max(c.progress, 10) } : c
-      )
+        c.id === id
+          ? { ...c, status: "in_progress", progress: Math.max(c.progress, 10) }
+          : c,
+      ),
     );
   };
 
@@ -549,10 +640,10 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? {
                 ...c,
                 progress: clamped,
-                status: clamped > 0 ? 'in_progress' : c.status,
+                status: clamped > 0 ? "in_progress" : c.status,
               }
-            : c
-        )
+            : c,
+        ),
       );
     }
   };
@@ -565,13 +656,13 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (c.id === id) {
           return {
             ...c,
-            status: 'completed',
+            status: "completed",
             progress: 100,
             completedAt: today,
           };
         }
         return c;
-      })
+      }),
     );
   };
 
@@ -581,18 +672,20 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (c.id !== id) return c;
         const newPriority = Math.max(1, Math.min(20, c.priority + delta));
         return { ...c, priority: newPriority };
-      })
+      }),
     );
   };
 
   // --- REVISION ACTIONS (MANUAL SCHEDULING & PRIORITY QUEUE, NO AUTO-SCHEDULE) ---
-  const addRevision = (revisionData: Omit<Revision, 'id'>): Revision => {
+  const addRevision = (revisionData: Omit<Revision, "id">): Revision => {
     const today = getTodayDateString();
-    const newRevId = `rev-${Date.now()}`;
+    const newRevId = generateEntityId("rev");
     const newRevision: Revision = {
       ...revisionData,
       id: newRevId,
-      status: revisionData.status || getRevisionStatus(revisionData.dueDate, false, false, today),
+      status:
+        revisionData.status ||
+        getRevisionStatus(revisionData.dueDate, false, false, today),
       priority: revisionData.priority || 10,
       progress: revisionData.progress || 0,
     };
@@ -602,17 +695,17 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Synchronize to calendar event
     const sub = subjects.find((s) => s.id === revisionData.subjectId);
     const chap = chapters.find((c) => c.id === revisionData.chapterId);
-    const subCode = sub?.code || sub?.name || 'Subject';
-    const chapName = chap?.name || 'Chapter';
+    const subCode = sub?.code || sub?.name || "Subject";
+    const chapName = chap?.name || "Chapter";
 
     const newCalEvent: CalendarEvent = {
-      id: `cal-rev-${Date.now()}`,
+      id: generateEntityId("cal-rev"),
       subjectId: revisionData.subjectId,
       chapterId: revisionData.chapterId,
       title: `${subCode}: ${chapName} Rev ${revisionData.revisionNumber}`,
-      type: 'revision',
+      type: "revision",
       date: revisionData.dueDate,
-      status: 'pending',
+      status: "pending",
       revisionId: newRevId,
     };
     setCalendarEvents((prev) => [...prev, newCalEvent]);
@@ -625,12 +718,14 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
       prev.map((r) => {
         if (r.id !== id) return r;
         return { ...r, ...updates };
-      })
+      }),
     );
 
     if (updates.dueDate) {
       setCalendarEvents((prev) =>
-        prev.map((ce) => (ce.revisionId === id ? { ...ce, date: updates.dueDate! } : ce))
+        prev.map((ce) =>
+          ce.revisionId === id ? { ...ce, date: updates.dueDate! } : ce,
+        ),
       );
     }
   };
@@ -649,17 +744,19 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (r.id !== id) return r;
         return {
           ...r,
-          status: 'completed',
+          status: "completed",
           progress: 100,
           completedDate: today,
           completedAt: new Date().toISOString(),
         };
-      })
+      }),
     );
 
     // Update calendar event for the completed revision
     setCalendarEvents((prev) =>
-      prev.map((ce) => (ce.revisionId === id ? { ...ce, status: 'completed' } : ce))
+      prev.map((ce) =>
+        ce.revisionId === id ? { ...ce, status: "completed" } : ce,
+      ),
     );
   };
 
@@ -671,29 +768,41 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ? {
               ...r,
               dueDate: newDueDate,
-              status: getRevisionStatus(newDueDate, false, r.status === 'skipped', today),
+              status: getRevisionStatus(
+                newDueDate,
+                false,
+                r.status === "skipped",
+                today,
+              ),
             }
-          : r
-      )
+          : r,
+      ),
     );
 
     // Update calendar event
     setCalendarEvents((prev) =>
-      prev.map((ce) => (ce.revisionId === id ? { ...ce, date: newDueDate } : ce))
+      prev.map((ce) =>
+        ce.revisionId === id ? { ...ce, date: newDueDate } : ce,
+      ),
     );
   };
 
   const skipRevision = (id: RevisionId) => {
-    setRevisions((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'skipped' } : r)));
+    setRevisions((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: "skipped" } : r)),
+    );
   };
 
   const adjustRevisionPriority = (id: RevisionId, delta: number) => {
     setRevisions((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r;
-        const newPriority = Math.max(1, Math.min(20, (r.priority || 10) + delta));
+        const newPriority = Math.max(
+          1,
+          Math.min(20, (r.priority || 10) + delta),
+        );
         return { ...r, priority: newPriority };
-      })
+      }),
     );
   };
 
@@ -705,8 +814,8 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ...r,
               progress: Math.max(r.progress || 0, 20),
             }
-          : r
-      )
+          : r,
+      ),
     );
   };
 
@@ -716,7 +825,7 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completeRevision(id);
     } else {
       setRevisions((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, progress: clamped } : r))
+        prev.map((r) => (r.id === id ? { ...r, progress: clamped } : r)),
       );
     }
   };
@@ -726,33 +835,37 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // --- PYQ QUESTION BANK ACTIONS (UNCHANGED) ---
-  const addPyq = (pyqData: Omit<PYQ, 'id'>): PYQ => {
+  const addPyq = (pyqData: Omit<PYQ, "id">): PYQ => {
     const newPyq: PYQ = {
       ...pyqData,
-      id: `pyq-${Date.now()}`,
+      id: generateEntityId("pyq"),
     };
     setPyqs((prev) => [newPyq, ...prev]);
     return newPyq;
   };
 
   const updatePyq = (id: PyqId, updates: Partial<PYQ>) => {
-    setPyqs((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    setPyqs((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+    );
   };
 
   const deletePyq = (id: PyqId) => {
     setPyqs((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const updatePyqStatus = (id: PyqId, status: PYQ['status']) => {
+  const updatePyqStatus = (id: PyqId, status: PYQ["status"]) => {
     setPyqs((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
   };
 
   // --- PYQ PRACTICE QUEUE ACTIONS (LEARNING-LIKE INTERFACE) ---
-  const addPyqQueueItem = (itemData: Omit<PyqQueueItem, 'id' | 'createdAt'>): PyqQueueItem => {
+  const addPyqQueueItem = (
+    itemData: Omit<PyqQueueItem, "id" | "createdAt">,
+  ): PyqQueueItem => {
     const today = getTodayDateString();
     const newItem: PyqQueueItem = {
       ...itemData,
-      id: `pyq-q-${Date.now()}`,
+      id: generateEntityId("pyq-q"),
       createdAt: today,
     };
     setPyqQueue((prev) => [newItem, ...prev]);
@@ -760,7 +873,9 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updatePyqQueueItem = (id: string, updates: Partial<PyqQueueItem>) => {
-    setPyqQueue((prev) => prev.map((pq) => (pq.id === id ? { ...pq, ...updates } : pq)));
+    setPyqQueue((prev) =>
+      prev.map((pq) => (pq.id === id ? { ...pq, ...updates } : pq)),
+    );
   };
 
   const deletePyqQueueItem = (id: string) => {
@@ -773,11 +888,11 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         pq.id === id
           ? {
               ...pq,
-              status: 'in_progress',
+              status: "in_progress",
               progress: Math.max(pq.progress, 15),
             }
-          : pq
-      )
+          : pq,
+      ),
     );
   };
 
@@ -788,13 +903,13 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         pq.id === id
           ? {
               ...pq,
-              status: 'completed',
+              status: "completed",
               progress: 100,
               solvedQuestions: pq.targetQuestions,
               completedAt: today,
             }
-          : pq
-      )
+          : pq,
+      ),
     );
   };
 
@@ -804,11 +919,15 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (pq.id !== id) return pq;
         const newPriority = Math.max(1, Math.min(20, pq.priority + delta));
         return { ...pq, priority: newPriority };
-      })
+      }),
     );
   };
 
-  const updatePyqQueueProgress = (id: string, progress: number, solvedCount?: number) => {
+  const updatePyqQueueProgress = (
+    id: string,
+    progress: number,
+    solvedCount?: number,
+  ) => {
     const clamped = Math.min(100, Math.max(0, Math.round(progress)));
     if (clamped === 100) {
       completePyqQueueItem(id);
@@ -819,38 +938,50 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return {
             ...pq,
             progress: clamped,
-            solvedQuestions: solvedCount !== undefined ? solvedCount : pq.solvedQuestions,
-            status: clamped > 0 ? 'in_progress' : pq.status,
+            solvedQuestions:
+              solvedCount !== undefined ? solvedCount : pq.solvedQuestions,
+            status: clamped > 0 ? "in_progress" : pq.status,
           };
-        })
+        }),
       );
     }
   };
 
   // --- CALENDAR ACTIONS ---
-  const addCalendarEvent = (eventData: Omit<CalendarEvent, 'id'>): CalendarEvent => {
+  const addCalendarEvent = (
+    eventData: Omit<CalendarEvent, "id">,
+  ): CalendarEvent => {
     const newEvent: CalendarEvent = {
       ...eventData,
-      id: `cal-${Date.now()}`,
+      id: generateEntityId("cal"),
     };
     setCalendarEvents((prev) => [...prev, newEvent]);
     return newEvent;
   };
 
-  const updateCalendarEvent = (id: CalendarEventId, updates: Partial<CalendarEvent>) => {
-    setCalendarEvents((prev) => prev.map((ce) => (ce.id === id ? { ...ce, ...updates } : ce)));
+  const updateCalendarEvent = (
+    id: CalendarEventId,
+    updates: Partial<CalendarEvent>,
+  ) => {
+    setCalendarEvents((prev) =>
+      prev.map((ce) => (ce.id === id ? { ...ce, ...updates } : ce)),
+    );
   };
 
   const deleteCalendarEvent = (id: CalendarEventId) => {
+    const event = calendarEvents.find((ce) => ce.id === id);
     setCalendarEvents((prev) => prev.filter((ce) => ce.id !== id));
+    if (event?.revisionId) {
+      setRevisions((prev) => prev.filter((r) => r.id !== event.revisionId));
+    }
   };
 
   // --- EXAM ACTIONS ---
-  const addExam = (examData: Omit<Exam, 'id' | 'createdAt'>): Exam => {
+  const addExam = (examData: Omit<Exam, "id" | "createdAt">): Exam => {
     const today = getTodayDateString();
     const newExam: Exam = {
       ...examData,
-      id: `exam-${Date.now()}`,
+      id: generateEntityId("exam"),
       createdAt: today,
     };
     setExams((prev) => [newExam, ...prev]);
@@ -866,7 +997,7 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
           }
           return s;
-        })
+        }),
       );
     }
 
@@ -874,11 +1005,52 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateExam = (id: string, updates: Partial<Exam>) => {
-    setExams((prev) => prev.map((e) => (e.id === id ? { ...e, ...updates } : e)));
+    const existingExam = exams.find((e) => e.id === id);
+    setExams((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+    );
+
+    if (
+      updates.subjectId !== undefined &&
+      existingExam &&
+      existingExam.subjectId !== updates.subjectId
+    ) {
+      setSubjects((prev) =>
+        prev.map((s) => {
+          if (
+            existingExam.subjectId &&
+            s.id === existingExam.subjectId &&
+            s.subjectTestsCount &&
+            s.subjectTestsCount > 0
+          ) {
+            return { ...s, subjectTestsCount: s.subjectTestsCount - 1 };
+          }
+          if (updates.subjectId && s.id === updates.subjectId) {
+            return { ...s, subjectTestsCount: (s.subjectTestsCount ?? 0) + 1 };
+          }
+          return s;
+        }),
+      );
+    }
   };
 
   const deleteExam = (id: string) => {
+    const examToDelete = exams.find((e) => e.id === id);
     setExams((prev) => prev.filter((e) => e.id !== id));
+    if (examToDelete?.subjectId) {
+      setSubjects((prev) =>
+        prev.map((s) => {
+          if (
+            s.id === examToDelete.subjectId &&
+            s.subjectTestsCount &&
+            s.subjectTestsCount > 0
+          ) {
+            return { ...s, subjectTestsCount: s.subjectTestsCount - 1 };
+          }
+          return s;
+        }),
+      );
+    }
   };
 
   return (
@@ -957,8 +1129,7 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useGate = (): GateContextType => {
   const context = useContext(GateContext);
   if (!context) {
-    throw new Error('useGate must be used within a GateProvider');
+    throw new Error("useGate must be used within a GateProvider");
   }
   return context;
 };
-

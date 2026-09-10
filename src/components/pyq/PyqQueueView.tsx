@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Plus,
   ArrowUp,
@@ -11,11 +11,11 @@ import {
   Check,
   RotateCcw,
   Target,
-} from 'lucide-react';
-import { useGate } from '../../context/GateContext';
-import { PyqQueueItem, PyqQueueStatus } from '../../types';
-import { StatusBadge } from '../common/Badge';
-import { Modal } from '../common/Modal';
+} from "lucide-react";
+import { useGate } from "../../context/GateContext";
+import { PyqQueueItem, PyqQueueStatus } from "../../types";
+import { StatusBadge } from "../common/Badge";
+import { Modal } from "../common/Modal";
 
 export const PyqQueueView: React.FC = () => {
   const {
@@ -32,7 +32,9 @@ export const PyqQueueView: React.FC = () => {
     updatePyqQueueProgress,
   } = useGate();
 
-  const [activeTabStatus, setActiveTabStatus] = useState<'active' | 'completed'>('active');
+  const [activeTabStatus, setActiveTabStatus] = useState<
+    "active" | "completed"
+  >("active");
 
   // Modal state for Add/Edit PYQ practice goal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,13 +42,13 @@ export const PyqQueueView: React.FC = () => {
 
   // Form states
   const [formSubjectId, setFormSubjectId] = useState<string>(
-    selectedSubjectId !== 'all' ? selectedSubjectId : subjects[0]?.id || ''
+    selectedSubjectId !== "all" ? selectedSubjectId : subjects[0]?.id || "",
   );
-  const [formChapterId, setFormChapterId] = useState<string>('');
+  const [formChapterId, setFormChapterId] = useState<string>("");
   const [formPriority, setFormPriority] = useState<number>(10);
   const [formTargetQuestions, setFormTargetQuestions] = useState<number>(20);
   const [formSolvedQuestions, setFormSolvedQuestions] = useState<number>(0);
-  const [formNotes, setFormNotes] = useState<string>('');
+  const [formNotes, setFormNotes] = useState<string>("");
 
   // Inline progress adjustment
   const [inlineItemId, setInlineItemId] = useState<string | null>(null);
@@ -54,22 +56,30 @@ export const PyqQueueView: React.FC = () => {
 
   // Filter by selected subject
   const subjectFilteredItems = pyqQueue.filter((item) =>
-    selectedSubjectId === 'all' ? true : item.subjectId === selectedSubjectId
+    selectedSubjectId === "all" ? true : item.subjectId === selectedSubjectId,
   );
 
   // Separate active vs completed
   const activeItems = subjectFilteredItems
-    .filter((item) => item.status !== 'completed')
-    .sort((a, b) => (b.priority || 10) - (a.priority || 10));
+    .filter((item) => item.status !== "completed")
+    .sort(
+      (a, b) =>
+        (b.priority || 10) - (a.priority || 10) ||
+        (b.createdAt || "").localeCompare(a.createdAt || ""),
+    );
 
   const completedItems = subjectFilteredItems
-    .filter((item) => item.status === 'completed')
-    .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+    .filter((item) => item.status === "completed")
+    .sort((a, b) => (b.completedAt || "").localeCompare(a.completedAt || ""));
 
   // CURRENT Top Priority Item in Queue
   const currentItem = activeItems[0] || null;
-  const currentSubject = currentItem ? subjects.find((s) => s.id === currentItem.subjectId) : null;
-  const currentChapter = currentItem ? chapters.find((c) => c.id === currentItem.chapterId) : null;
+  const currentSubject = currentItem
+    ? subjects.find((s) => s.id === currentItem.subjectId)
+    : null;
+  const currentChapter = currentItem
+    ? chapters.find((c) => c.id === currentItem.chapterId)
+    : null;
 
   // UP NEXT in queue
   const upNextItems = activeItems.slice(1);
@@ -79,14 +89,25 @@ export const PyqQueueView: React.FC = () => {
 
   const handleOpenAdd = () => {
     setEditingItemId(null);
-    const subId = selectedSubjectId !== 'all' ? selectedSubjectId : subjects[0]?.id || '';
+    const subId =
+      selectedSubjectId !== "all" ? selectedSubjectId : subjects[0]?.id || "";
     setFormSubjectId(subId);
     const availableChaps = chapters.filter((c) => c.subjectId === subId);
-    setFormChapterId(availableChaps[0]?.id || '');
-    setFormPriority(activeItems.length > 0 ? Math.max(...activeItems.map((i) => i.priority || 10)) + 1 : 10);
+    setFormChapterId(availableChaps[0]?.id || "");
+    setFormPriority(
+      activeItems.length > 0
+        ? Math.min(
+            20,
+            Math.max(
+              1,
+              Math.max(...activeItems.map((i) => i.priority || 10)) + 1,
+            ),
+          )
+        : 10,
+    );
     setFormTargetQuestions(20);
     setFormSolvedQuestions(0);
-    setFormNotes('');
+    setFormNotes("");
     setIsModalOpen(true);
   };
 
@@ -97,7 +118,7 @@ export const PyqQueueView: React.FC = () => {
     setFormPriority(item.priority || 10);
     setFormTargetQuestions(item.targetQuestions || 20);
     setFormSolvedQuestions(item.solvedQuestions || 0);
-    setFormNotes(item.notes || '');
+    setFormNotes(item.notes || "");
     setIsModalOpen(true);
   };
 
@@ -106,29 +127,46 @@ export const PyqQueueView: React.FC = () => {
     if (!formSubjectId || !formChapterId) return;
 
     const target = Math.max(1, Number(formTargetQuestions) || 20);
-    const solved = Math.min(target, Math.max(0, Number(formSolvedQuestions) || 0));
+    const solved = Math.min(
+      target,
+      Math.max(0, Number(formSolvedQuestions) || 0),
+    );
     const progress = Math.round((solved / target) * 100);
+    const clampedPriority = Math.min(
+      20,
+      Math.max(1, Number(formPriority) || 10),
+    );
 
     if (editingItemId) {
       updatePyqQueueItem(editingItemId, {
         subjectId: formSubjectId,
         chapterId: formChapterId,
-        priority: Number(formPriority),
+        priority: clampedPriority,
         targetQuestions: target,
         solvedQuestions: solved,
         progress,
-        status: progress === 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started',
+        status:
+          progress === 100
+            ? "completed"
+            : progress > 0
+              ? "in_progress"
+              : "not_started",
         notes: formNotes.trim(),
       });
     } else {
       addPyqQueueItem({
         subjectId: formSubjectId,
         chapterId: formChapterId,
-        priority: Number(formPriority),
+        priority: clampedPriority,
         targetQuestions: target,
         solvedQuestions: solved,
         progress,
-        status: progress === 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started',
+        status:
+          progress === 100
+            ? "completed"
+            : progress > 0
+              ? "in_progress"
+              : "not_started",
         notes: formNotes.trim(),
       });
     }
@@ -149,7 +187,8 @@ export const PyqQueueView: React.FC = () => {
             </span>
           </h2>
           <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1">
-            Organize chapter-wise PYQ solving goals with targeted question counts and priority queues.
+            Organize chapter-wise PYQ solving goals with targeted question
+            counts and priority queues.
           </p>
         </div>
 
@@ -165,11 +204,11 @@ export const PyqQueueView: React.FC = () => {
       {/* Tabs: Active Queue vs Completed */}
       <div className="flex items-center gap-2 border-b border-[#e5e5ea] dark:border-[#333336] text-xs sm:text-sm font-semibold">
         <button
-          onClick={() => setActiveTabStatus('active')}
+          onClick={() => setActiveTabStatus("active")}
           className={`pb-2.5 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTabStatus === 'active'
-              ? 'border-[#0071e3] dark:border-[#2997ff] text-[#0071e3] dark:text-[#2997ff]'
-              : 'border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+            activeTabStatus === "active"
+              ? "border-[#0071e3] dark:border-[#2997ff] text-[#0071e3] dark:text-[#2997ff]"
+              : "border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
           }`}
         >
           <span>Priority Queue</span>
@@ -179,11 +218,11 @@ export const PyqQueueView: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTabStatus('completed')}
+          onClick={() => setActiveTabStatus("completed")}
           className={`pb-2.5 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTabStatus === 'completed'
-              ? 'border-[#0071e3] dark:border-[#2997ff] text-[#0071e3] dark:text-[#2997ff]'
-              : 'border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+            activeTabStatus === "completed"
+              ? "border-[#0071e3] dark:border-[#2997ff] text-[#0071e3] dark:text-[#2997ff]"
+              : "border-transparent text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
           }`}
         >
           <span>Completed Goals</span>
@@ -194,7 +233,7 @@ export const PyqQueueView: React.FC = () => {
       </div>
 
       {/* Active Tab View */}
-      {activeTabStatus === 'active' ? (
+      {activeTabStatus === "active" ? (
         <div className="space-y-6">
           {/* CURRENT TOP TARGET HERO CARD */}
           {currentItem ? (
@@ -206,7 +245,9 @@ export const PyqQueueView: React.FC = () => {
                   </span>
                   <span
                     className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white"
-                    style={{ backgroundColor: currentSubject?.color || '#0071e3' }}
+                    style={{
+                      backgroundColor: currentSubject?.color || "#0071e3",
+                    }}
                   >
                     {currentSubject?.code || currentSubject?.name}
                   </span>
@@ -220,12 +261,16 @@ export const PyqQueueView: React.FC = () => {
 
               <div className="mb-4">
                 <h3 className="text-xl sm:text-2xl font-bold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
-                  {currentChapter?.name || 'Unknown Chapter'}
+                  {currentChapter?.name || "Unknown Chapter"}
                 </h3>
                 {currentItem.notes ? (
-                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] max-w-2xl">{currentItem.notes}</p>
+                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] max-w-2xl">
+                    {currentItem.notes}
+                  </p>
                 ) : (
-                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] italic">Target: Solve standard GATE questions for this topic.</p>
+                  <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] italic">
+                    Target: Solve standard GATE questions for this topic.
+                  </p>
                 )}
               </div>
 
@@ -233,12 +278,17 @@ export const PyqQueueView: React.FC = () => {
               <div className="bg-[#f5f5f7] dark:bg-[#1d1d1f] p-4 rounded-xl border border-[#e5e5ea] dark:border-[#333336] space-y-3">
                 <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-[#86868b] dark:text-[#a1a1a6]">Solved Questions:</span>
+                    <span className="font-semibold text-[#86868b] dark:text-[#a1a1a6]">
+                      Solved Questions:
+                    </span>
                     <span className="font-bold text-[#0071e3] dark:text-[#2997ff] text-sm">
-                      {currentItem.solvedQuestions} / {currentItem.targetQuestions}
+                      {currentItem.solvedQuestions} /{" "}
+                      {currentItem.targetQuestions}
                     </span>
                   </div>
-                  <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7] text-sm">{currentItem.progress}%</span>
+                  <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7] text-sm">
+                    {currentItem.progress}%
+                  </span>
                 </div>
 
                 <div className="w-full bg-[#e5e5ea] dark:bg-[#2c2c2e] h-2.5 rounded-full overflow-hidden">
@@ -252,9 +302,18 @@ export const PyqQueueView: React.FC = () => {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={() => {
-                        const newSolved = Math.min(currentItem.targetQuestions, currentItem.solvedQuestions + 1);
-                        const newProg = Math.round((newSolved / currentItem.targetQuestions) * 100);
-                        updatePyqQueueProgress(currentItem.id, newProg, newSolved);
+                        const newSolved = Math.min(
+                          currentItem.targetQuestions,
+                          currentItem.solvedQuestions + 1,
+                        );
+                        const newProg = Math.round(
+                          (newSolved / currentItem.targetQuestions) * 100,
+                        );
+                        updatePyqQueueProgress(
+                          currentItem.id,
+                          newProg,
+                          newSolved,
+                        );
                       }}
                       className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#0071e3] dark:text-[#2997ff] hover:opacity-80 rounded-full transition-colors min-h-[32px]"
                     >
@@ -262,9 +321,18 @@ export const PyqQueueView: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        const newSolved = Math.min(currentItem.targetQuestions, currentItem.solvedQuestions + 5);
-                        const newProg = Math.round((newSolved / currentItem.targetQuestions) * 100);
-                        updatePyqQueueProgress(currentItem.id, newProg, newSolved);
+                        const newSolved = Math.min(
+                          currentItem.targetQuestions,
+                          currentItem.solvedQuestions + 5,
+                        );
+                        const newProg = Math.round(
+                          (newSolved / currentItem.targetQuestions) * 100,
+                        );
+                        updatePyqQueueProgress(
+                          currentItem.id,
+                          newProg,
+                          newSolved,
+                        );
                       }}
                       className="px-3 py-1 text-xs font-semibold bg-white dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#0071e3] dark:text-[#2997ff] hover:opacity-80 rounded-full transition-colors min-h-[32px]"
                     >
@@ -273,7 +341,7 @@ export const PyqQueueView: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
-                    {currentItem.status === 'not_started' && (
+                    {currentItem.status === "not_started" && (
                       <button
                         onClick={() => startPyqQueueItem(currentItem.id)}
                         className="flex items-center gap-1 px-3.5 py-1.5 bg-[#0071e3] dark:bg-[#2997ff] text-white dark:text-black text-xs font-semibold rounded-full hover:opacity-90 transition-colors min-h-[36px]"
@@ -305,9 +373,12 @@ export const PyqQueueView: React.FC = () => {
           ) : (
             <div className="bg-white dark:bg-[#161617] rounded-2xl border border-dashed border-[#e5e5ea] dark:border-[#333336] p-8 text-center transition-colors">
               <FileQuestion className="w-10 h-10 text-[#86868b] mx-auto mb-2" />
-              <h3 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">No active PYQ practice targets</h3>
+              <h3 className="text-base font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                No active PYQ practice targets
+              </h3>
               <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-1 max-w-md mx-auto">
-                Add a target to set a question goal for any chapter and track your practice progress.
+                Add a target to set a question goal for any chapter and track
+                your practice progress.
               </p>
               <button
                 onClick={handleOpenAdd}
@@ -368,24 +439,31 @@ export const PyqQueueView: React.FC = () => {
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span
                               className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                              style={{ backgroundColor: sub?.color || '#0071e3' }}
+                              style={{
+                                backgroundColor: sub?.color || "#0071e3",
+                              }}
                             >
                               {sub?.code || sub?.name}
                             </span>
-                            <h5 className="text-sm font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap?.name}</h5>
+                            <h5 className="text-sm font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                              {chap?.name}
+                            </h5>
                             <StatusBadge status={item.status} />
                           </div>
 
                           <div className="flex flex-wrap items-center gap-3 text-xs text-[#86868b] dark:text-[#a1a1a6]">
                             <span>
-                              Target: {item.solvedQuestions}/{item.targetQuestions} solved
+                              Target: {item.solvedQuestions}/
+                              {item.targetQuestions} solved
                             </span>
                             <span>•</span>
                             <span>Progress: {item.progress}%</span>
                             {item.notes && (
                               <>
                                 <span>•</span>
-                                <span className="italic max-w-xs truncate">{item.notes}</span>
+                                <span className="italic max-w-xs truncate">
+                                  {item.notes}
+                                </span>
                               </>
                             )}
                           </div>
@@ -401,14 +479,25 @@ export const PyqQueueView: React.FC = () => {
                               min="0"
                               max={item.targetQuestions}
                               value={inlineSolvedCount}
-                              onChange={(e) => setInlineSolvedCount(Number(e.target.value))}
+                              onChange={(e) =>
+                                setInlineSolvedCount(Number(e.target.value))
+                              }
                               className="w-14 px-2 py-0.5 text-xs bg-white dark:bg-[#1d1d1f] border border-[#e5e5ea] dark:border-[#3a3a3c] rounded-lg text-[#1d1d1f] dark:text-[#f5f5f7]"
                             />
-                            <span className="text-xs text-[#86868b] dark:text-[#a1a1a6]">/ {item.targetQuestions}</span>
+                            <span className="text-xs text-[#86868b] dark:text-[#a1a1a6]">
+                              / {item.targetQuestions}
+                            </span>
                             <button
                               onClick={() => {
-                                const newProg = Math.round((inlineSolvedCount / item.targetQuestions) * 100);
-                                updatePyqQueueProgress(item.id, newProg, inlineSolvedCount);
+                                const newProg = Math.round(
+                                  (inlineSolvedCount / item.targetQuestions) *
+                                    100,
+                                );
+                                updatePyqQueueProgress(
+                                  item.id,
+                                  newProg,
+                                  inlineSolvedCount,
+                                );
                                 setInlineItemId(null);
                               }}
                               className="p-1 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-full"
@@ -428,7 +517,7 @@ export const PyqQueueView: React.FC = () => {
                           </button>
                         )}
 
-                        {item.status === 'not_started' && (
+                        {item.status === "not_started" && (
                           <button
                             onClick={() => startPyqQueueItem(item.id)}
                             className="p-2 text-[#0071e3] dark:text-[#2997ff] hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition-colors"
@@ -455,7 +544,9 @@ export const PyqQueueView: React.FC = () => {
 
                         <button
                           onClick={() => {
-                            if (window.confirm('Delete this PYQ practice target?')) {
+                            if (
+                              window.confirm("Delete this PYQ practice target?")
+                            ) {
                               deletePyqQueueItem(item.id);
                             }
                           }}
@@ -486,12 +577,17 @@ export const PyqQueueView: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <div>
-                      <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">{chap?.name}</span>
+                      <span className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        {chap?.name}
+                      </span>
                       <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6] font-medium">
-                        {sub?.code} • {item.solvedQuestions}/{item.targetQuestions} PYQs Solved
+                        {sub?.code} • {item.solvedQuestions}/
+                        {item.targetQuestions} PYQs Solved
                       </span>
                       {item.completedAt && (
-                        <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6]">Completed on {item.completedAt}</span>
+                        <span className="ml-2 text-[#86868b] dark:text-[#a1a1a6]">
+                          Completed on {item.completedAt}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -513,7 +609,11 @@ export const PyqQueueView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingItemId ? 'Edit PYQ Practice Target' : 'Create PYQ Practice Target'}
+        title={
+          editingItemId
+            ? "Edit PYQ Practice Target"
+            : "Create PYQ Practice Target"
+        }
         subtitle="Set a question target and queue priority for this chapter"
       >
         <form onSubmit={handleSaveItem} className="space-y-4">
@@ -525,8 +625,10 @@ export const PyqQueueView: React.FC = () => {
               value={formSubjectId}
               onChange={(e) => {
                 setFormSubjectId(e.target.value);
-                const firstChap = chapters.find((c) => c.subjectId === e.target.value);
-                setFormChapterId(firstChap ? firstChap.id : '');
+                const firstChap = chapters.find(
+                  (c) => c.subjectId === e.target.value,
+                );
+                setFormChapterId(firstChap ? firstChap.id : "");
               }}
               className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5ea] dark:border-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#0071e3] focus:outline-none"
               required
@@ -632,7 +734,7 @@ export const PyqQueueView: React.FC = () => {
               type="submit"
               className="px-4 py-2 text-xs font-semibold text-white dark:text-black bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff] rounded-full shadow-xs transition-colors"
             >
-              {editingItemId ? 'Save Changes' : 'Add to Practice Queue'}
+              {editingItemId ? "Save Changes" : "Add to Practice Queue"}
             </button>
           </div>
         </form>
