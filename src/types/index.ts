@@ -25,8 +25,20 @@ export type PyqDifficulty = "easy" | "medium" | "hard";
 export type PyqStatus = "not_attempted" | "correct" | "wrong" | "skipped";
 export type PyqQueueStatus = "not_started" | "in_progress" | "completed";
 export type CalendarEventType = "revision" | "learning" | "pyq" | "other";
-export type ExamType = "full_length" | "subject_test" | "topic_test";
-export type ExamStatus = "completed" | "scheduled";
+export type ExamType =
+  | "full_length"
+  | "subject_test"
+  | "topic_test"
+  | "chapter_wise"
+  | "multiple_subject"
+  | "all_subject";
+export type ExamStatus = "completed" | "scheduled" | "in_progress";
+export type QuestionType = "mcq" | "msq" | "nat";
+export type ExamCompletionStatus =
+  | "completed"
+  | "time_expired"
+  | "exited"
+  | "scheduled";
 
 export interface Subject {
   id: SubjectId;
@@ -87,6 +99,7 @@ export interface PYQ {
   isNumerical?: boolean;
   isNat?: boolean;
   natAnswerRange?: { min: number; max: number };
+  questionType?: QuestionType;
   difficulty: PyqDifficulty;
   status: PyqStatus;
   notes?: string;
@@ -121,12 +134,88 @@ export interface CalendarEvent {
   notes?: string;
 }
 
+export interface ExamQuestionResult {
+  questionId: string;
+  questionNumber?: string | number;
+  questionText: string;
+  imageUrl?: string;
+  questionType: QuestionType;
+  subjectId: string;
+  subjectName: string;
+  chapterId: string;
+  chapterName: string;
+  options?: string[];
+  userAnswer: any;
+  correctAnswer: any;
+  isCorrect: boolean;
+  isAttempted: boolean;
+  marksObtained: number; // +1, -1, 0
+  maxMarks: number;
+  timeSpentSeconds: number;
+  explanation?: string;
+  natAnswerRange?: { min: number; max: number };
+  numericalAnswer?: number | string;
+}
+
+export interface ExamReportData {
+  examId: string;
+  title: string;
+  date: string;
+  durationMinutes: number;
+  timeTakenSeconds: number;
+  completionStatus: ExamCompletionStatus;
+  syllabusScope: "all" | "multiple_subjects" | "single_subject" | "chapters";
+  subjectNames: string[];
+  chapterNames?: string[];
+  questionTypes: QuestionType[];
+  totalQuestions: number;
+  attemptedQuestions: number;
+  unattemptedQuestions: number;
+  correctQuestions: number;
+  wrongQuestions: number;
+  totalMarks: number;
+  obtainedMarks: number;
+  percentage: number;
+  accuracy: number;
+  positiveMarks: number;
+  negativeMarks: number;
+  avgTimePerQuestionSeconds: number;
+  fastestQuestion?: { questionNumber: string | number; seconds: number };
+  slowestQuestion?: { questionNumber: string | number; seconds: number };
+  typeStats: Record<
+    QuestionType,
+    {
+      total: number;
+      correct: number;
+      wrong: number;
+      unattempted: number;
+      accuracy: number;
+    }
+  >;
+  topicStats: Array<{
+    subjectName: string;
+    chapterName: string;
+    total: number;
+    attempted: number;
+    correct: number;
+    wrong: number;
+    accuracy: number;
+    category: "strong" | "weak" | "moderate";
+  }>;
+  questions: ExamQuestionResult[];
+}
+
 export interface Exam {
   id: string;
   title: string;
   examType: ExamType;
   subjectId?: SubjectId;
   chapterId?: ChapterId;
+  subjectIds?: SubjectId[];
+  chapterIds?: ChapterId[];
+  questionTypes?: QuestionType[];
+  syllabusScope?: "all" | "multiple_subjects" | "single_subject" | "chapters";
+  completionStatus?: ExamCompletionStatus;
   date: string;
   durationMinutes: number;
   totalMarks: number;
@@ -139,10 +228,12 @@ export interface Exam {
   attemptedQuestions?: number;
   correctQuestions?: number;
   wrongQuestions?: number;
+  positiveMarks?: number;
   negativeMarks?: number;
   weakTopics?: string[];
   strongTopics?: string[];
   notes?: string;
+  reportData?: ExamReportData;
   createdAt?: string;
 }
 

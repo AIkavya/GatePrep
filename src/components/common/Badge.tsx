@@ -162,17 +162,33 @@ export const EventTypeBadge: React.FC<{ type: CalendarEventType }> = ({
   }
 };
 
-export const QuestionTypeBadge: React.FC<{ isNat?: boolean }> = ({ isNat }) => {
-  if (isNat) {
+export const QuestionTypeBadge: React.FC<{
+  type?: "mcq" | "msq" | "nat" | string;
+  isNat?: boolean;
+}> = ({ type, isNat }) => {
+  const resolvedType = type ? type.toLowerCase() : isNat ? "nat" : "mcq";
+
+  if (resolvedType === "nat") {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-50 text-violet-700 border border-violet-200/80 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800/60 shadow-2xs">
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-violet-50 text-violet-700 border border-violet-200/80 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800/60 shadow-2xs">
         <span className="w-1.5 h-1.5 rounded-full bg-violet-600 dark:bg-violet-400" />
         NAT
       </span>
     );
   }
+
+  if (resolvedType === "msq") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 shadow-2xs">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+        MSQ
+      </span>
+    );
+  }
+
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200/80 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/60 shadow-2xs">
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200/80 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/60 shadow-2xs">
+      <span className="w-1.5 h-1.5 rounded-full bg-sky-600 dark:bg-sky-400" />
       MCQ
     </span>
   );
