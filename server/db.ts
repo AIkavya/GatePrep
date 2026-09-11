@@ -122,8 +122,10 @@ export function generateUserId(username: string): string {
   const clean = username
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "_");
-  return `usr_${clean}`;
+    .replace(/[^a-z0-9_]/g, "_")
+    .slice(0, 16);
+  const entropy = Math.random().toString(36).substring(2, 10);
+  return `usr_${clean}_${entropy}`;
 }
 
 export async function getDb(): Promise<Database | null> {
@@ -134,6 +136,20 @@ export async function getDb(): Promise<Database | null> {
     const currentDir = getCurrentDir();
     // Pre-warm in-memory structures from backup store
     loadFallbackData();
+
+    // Ensure guest user data exists in memory
+    if (!memoryStudyData.has("guest_aspirant")) {
+      memoryStudyData.set("guest_aspirant", {
+        subjects: [],
+        chapters: [],
+        revisions: [],
+        pyqs: [],
+        pyqQueue: [],
+        calendarEvents: [],
+        exams: [],
+        revisionSettings: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
+      });
+    }
 
     // Attempt locating sql-wasm.wasm across common bundle and filesystem paths
     const SQL = await initSqlJs({
@@ -171,6 +187,9 @@ export async function getDb(): Promise<Database | null> {
     } else {
       dbInstance = new SQL.Database();
     }
+
+    // Enable foreign keys
+    dbInstance.run("PRAGMA foreign_keys = ON;");
 
     // Initialize SQLite schema
     dbInstance.run(`
@@ -377,6 +396,9 @@ export async function insertUser(
     checkUser.free();
 
     const finalHash = effectiveHash || dbHash || "";
+    if (!finalHash) {
+      throw new Error("Cannot save user without password hash.");
+    }
 
     if (userExists) {
       db.run("UPDATE users SET username = ?, password_hash = ? WHERE id = ?", [
@@ -421,6 +443,26 @@ export async function insertUser(
   }
 
   return newUser;
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  memoryUsers.delete(id);
+  memoryStudyData.delete(id);
+
+  const db = await getDb();
+  if (db) {
+    try {
+      db.run("DELETE FROM study_data WHERE user_id = ?", [id]);
+      db.run("DELETE FROM users WHERE id = ?", [id]);
+      persistDb();
+      return true;
+    } catch (err) {
+      console.warn("SQLite delete user failed:", err);
+    }
+  }
+
+  persistFallbackData();
+  return true;
 }
 
 export async function getUserStudyData(
@@ -502,28 +544,34 @@ export async function saveUserStudyData(
 ): Promise<void> {
   const db = await getDb();
   const now = new Date().toISOString();
+  const safeData = data && typeof data === "object" ? data : {};
 
   // Retrieve existing record first to merge partial update cleanly
   const existing = await getUserStudyData(userId);
 
   const updatedData: StudyDataRecord = {
-    subjects:
-      data.subjects !== undefined ? data.subjects : existing.subjects || [],
-    chapters:
-      data.chapters !== undefined ? data.chapters : existing.chapters || [],
-    revisions:
-      data.revisions !== undefined ? data.revisions : existing.revisions || [],
-    pyqs: data.pyqs !== undefined ? data.pyqs : existing.pyqs || [],
-    pyqQueue:
-      data.pyqQueue !== undefined ? data.pyqQueue : existing.pyqQueue || [],
-    calendarEvents:
-      data.calendarEvents !== undefined
-        ? data.calendarEvents
-        : existing.calendarEvents || [],
-    exams: data.exams !== undefined ? data.exams : existing.exams || [],
+    subjects: Array.isArray(safeData.subjects)
+      ? safeData.subjects
+      : existing.subjects || [],
+    chapters: Array.isArray(safeData.chapters)
+      ? safeData.chapters
+      : existing.chapters || [],
+    revisions: Array.isArray(safeData.revisions)
+      ? safeData.revisions
+      : existing.revisions || [],
+    pyqs: Array.isArray(safeData.pyqs) ? safeData.pyqs : existing.pyqs || [],
+    pyqQueue: Array.isArray(safeData.pyqQueue)
+      ? safeData.pyqQueue
+      : existing.pyqQueue || [],
+    calendarEvents: Array.isArray(safeData.calendarEvents)
+      ? safeData.calendarEvents
+      : existing.calendarEvents || [],
+    exams: Array.isArray(safeData.exams)
+      ? safeData.exams
+      : existing.exams || [],
     revisionSettings:
-      data.revisionSettings !== undefined
-        ? data.revisionSettings
+      safeData.revisionSettings && typeof safeData.revisionSettings === "object"
+        ? safeData.revisionSettings
         : existing.revisionSettings || {
             rev1Days: 7,
             rev2Days: 14,
@@ -631,20 +679,38 @@ export async function resetUserStudyData(userId: string): Promise<void> {
   }
 
   try {
-    db.run(
-      `UPDATE study_data SET
-        subjects_json = '[]',
-        chapters_json = '[]',
-        revisions_json = '[]',
-        pyqs_json = '[]',
-        pyq_queue_json = '[]',
-        calendar_json = '[]',
-        exams_json = '[]',
-        settings_json = ?,
-        updated_at = ?
-       WHERE user_id = ?`,
-      [JSON.stringify(defaultSettings), now, userId],
+    const check = db.prepare(
+      "SELECT user_id FROM study_data WHERE user_id = ? LIMIT 1",
     );
+    check.bind([userId]);
+    const exists = check.step();
+    check.free();
+
+    const settingsJson = JSON.stringify(defaultSettings);
+    if (exists) {
+      db.run(
+        `UPDATE study_data SET
+          subjects_json = '[]',
+          chapters_json = '[]',
+          revisions_json = '[]',
+          pyqs_json = '[]',
+          pyq_queue_json = '[]',
+          calendar_json = '[]',
+          exams_json = '[]',
+          settings_json = ?,
+          updated_at = ?
+         WHERE user_id = ?`,
+        [settingsJson, now, userId],
+      );
+    } else {
+      db.run(
+        `INSERT INTO study_data (
+          user_id, subjects_json, chapters_json, revisions_json, pyqs_json,
+          pyq_queue_json, calendar_json, exams_json, settings_json, updated_at
+        ) VALUES (?, '[]', '[]', '[]', '[]', '[]', '[]', '[]', ?, ?)`,
+        [userId, settingsJson, now],
+      );
+    }
 
     persistDb();
   } catch (err) {

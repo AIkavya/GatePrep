@@ -30,7 +30,7 @@ A high-performance, distraction-free study management platform designed specific
 ## Core Capabilities
 
 - **Priority-Stack Learning Queue**: Organizes chapters dynamically by priority weightage (1–20) rather than static checklists. Advancing progress to 100% automatically schedules the chapter into Spaced Repetition.
-- **Automated Spaced Repetition Engine**: Calculates real-time revision due dates based on the forgetting curve (configurable: default 7, 14, and 28-day intervals). Revisions dynamically categorize as _Due Today_, _Overdue_, _Upcoming_, or _Completed_.
+- **Automated Spaced Repetition Engine**: Calculates real-time revision due dates based on the forgetting curve (configurable: default 7, 14, and 28-day intervals). Revisions dynamically categorize as *Due Today*, *Overdue*, *Upcoming*, or *Completed*.
 - **10,000+ PYQ Question Bank & Focus Queue**: Practice questions filtered by year (1990–Present), subject, chapter, status, and difficulty. Includes interactive step-by-step mathematical solutions and cycle counters.
 - **Mock Exam Analytics Engine**: Log and evaluate Full-Length Mocks (65 questions, 100 marks, 180 mins), Subject Tests, and Topic Tests. Automatically calculates net score, accuracy percentage, negative marking penalties (1/3 and 2/3 deductions), and flags weak vs. strong topics.
 - **Multi-Tenant SQLite Persistence**: Lightweight, zero-config relational database powered by `sql.js` (WebAssembly) with dual-layer JSON write-through fallback to guarantee zero data loss across container cold starts.
@@ -58,15 +58,15 @@ A high-performance, distraction-free study management platform designed specific
 └─────────────────────────────────────────────────────────┘
 ```
 
-| Layer                  | Technologies                                                  |
-| :--------------------- | :------------------------------------------------------------ |
-| **Frontend Framework** | React 19, TypeScript, Vite                                    |
-| **Styling & Layout**   | Tailwind CSS v4, Motion                                       |
-| **Icons**              | Lucide React                                                  |
-| **Server Runtime**     | Node.js, Express.js                                           |
-| **Authentication**     | JSON Web Tokens (`jsonwebtoken`), `bcryptjs`                  |
-| **Database**           | SQLite via `sql.js` (WASM) with dual-layer JSON write-through |
-| **Tooling & Build**    | `esbuild`, `tsx`, Vite                                        |
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend Framework** | React 19, TypeScript, Vite |
+| **Styling & Layout** | Tailwind CSS v4, Motion |
+| **Icons** | Lucide React |
+| **Server Runtime** | Node.js, Express.js |
+| **Authentication** | JSON Web Tokens (`jsonwebtoken`), `bcryptjs` |
+| **Database** | SQLite via `sql.js` (WASM) with dual-layer JSON write-through |
+| **Tooling & Build** | `esbuild`, `tsx`, Vite |
 
 ---
 
@@ -80,7 +80,6 @@ A high-performance, distraction-free study management platform designed specific
 ### Installation
 
 1. Clone the repository:
-
    ```bash
    git clone https://github.com/your-username/gate-prep.git
    cd gate-prep
@@ -94,19 +93,15 @@ A high-performance, distraction-free study management platform designed specific
 ### Running the Application
 
 - **Development Mode** (boots full-stack server and Vite dev middleware on port 3000):
-
   ```bash
   npm run dev
   ```
-
   Open your browser and navigate to:
-
   ```
   http://localhost:3000
   ```
 
 - **Production Build**:
-
   ```bash
   npm run build
   ```
@@ -121,13 +116,11 @@ A high-performance, distraction-free study management platform designed specific
 ## Step-by-Step Usage Guide
 
 ### 1. Account Authentication & Guest Mode
-
 - **Sign In / Register**: Create a personal account with a unique username and password. Usernames are case-insensitive (`Kavya` and `kavya` map to the same account).
 - **Guest Mode**: Click **"Continue as Guest Aspirant"** for instant, local-first access without creating an account.
 - **Cross-Tab Safety**: If you log out in one browser tab, all other active tabs instantly sync and redirect to the sign-in modal.
 
 ### 2. Curriculum & Subject Setup
-
 - **Clean Slate by Default**: Every new account starts with zero clutter (0 subjects, 0 chapters).
 - **One-Click Template Import**: Click **"Load GATE CS Template"** on the Dashboard or in the Settings menu to instantly import the complete GATE Computer Science & IT syllabus:
   - Database Management Systems (DBMS)
@@ -144,14 +137,12 @@ A high-performance, distraction-free study management platform designed specific
 - **Custom Subjects**: Add, edit, or color-code your own target subjects with priority weights and target completion dates.
 
 ### 3. Active Learning Queue
-
 - Navigate to the **Learning** tab.
 - Chapters are organized into a **Priority Stack** sorted by urgency and importance (highest priority at the top).
 - **Update Progress**: Use the progress slider or quick adjustment buttons.
 - **Marking Complete**: Reaching 100% marks the chapter as completed and automatically pushes it into the **Spaced Repetition Engine** for Revision 1.
 
 ### 4. Spaced Repetition Revision Engine
-
 - Navigate to the **Revisions** tab.
 - Revisions are grouped into:
   - **Due Today**: Items requiring active recall today.
@@ -162,16 +153,21 @@ A high-performance, distraction-free study management platform designed specific
 - **Custom Spaced Intervals**: Click **Settings** in the revision tab to configure standard intervals (e.g., 5 days, 10 days, 21 days).
 
 ### 5. PYQ Practice & Question Bank
-
 - Navigate to the **PYQs** tab.
 - Toggle between:
   - **Focus Queue**: Displays active problem-solving sets for the chapters you are currently studying.
-  - **Question Bank**: Search across years, subjects, question types (MCQ, MSQ, NAT), and marks (1 Mark / 2 Marks).
-- **Interactive Solutions**: Click **"Show Detailed Solution"** to reveal step-by-step mathematical proofs and theoretical derivations.
+  - **Question Bank**: Search across years (1990–Present), subjects, question types (**MCQ** vs. **NAT**), marks (**1 Mark** vs. **2 Marks**), status, and difficulty.
+- **Add / Edit PYQ Dialog**:
+  - **Question Format**: Easily toggle between standard **MCQ (4 Options)** and **NAT (Numerical Answer Type)**.
+  - **Marks Selection**: Checkbox toggle to assign **1 Mark** or **2 Marks**.
+  - **Image & Diagram Attachment**: Upload diagrams via drag-and-drop, local file picker, or remote image URL.
+  - **4-Option Grid with Answer Checkboxes**: For MCQs, 4 distinct option cards are provided where clicking each option's small checkbox immediately tags it as the correct answer (supports single or multi-correct).
+  - **NAT Specifications**: For NAT questions, specify exact numerical answers and acceptable range boundaries (`min` and `max`).
+  - **Solution & Key Concepts**: Document the complete mathematical derivation and step-by-step reasoning.
+- **Interactive Solutions**: Click **"View Answer & Solution"** to reveal the verified answer, acceptable range bounds for NATs, and detailed explanations.
 - **Cycle Tracking**: Track how many times you have solved an entire subject's past papers (`Cycle 1`, `Cycle 2`).
 
 ### 6. Mock Exam Tracker & Diagnostic Analytics
-
 - Navigate to the **Mock Tests** tab.
 - Click **"+ Log Mock Exam"** to record an attempt:
   - **Exam Types**: Full Length Mock (100 marks), Subject Test, or Topic Test.
@@ -182,7 +178,6 @@ A high-performance, distraction-free study management platform designed specific
   - Weak Topics list highlighted for targeted revision before the actual GATE exam.
 
 ### 7. Interactive Study Calendar
-
 - Navigate to the **Calendar** tab.
 - View month-by-month study timelines.
 - Scheduled revisions, exam milestones, and active learning goals are color-coded and synchronized automatically.
@@ -196,7 +191,6 @@ The application uses an embedded **SQLite** database using `sql.js` (compiled to
 ### Tables & Schema
 
 1. **`users` Table**:
-
    ```sql
    CREATE TABLE IF NOT EXISTS users (
      id TEXT PRIMARY KEY,
@@ -225,7 +219,6 @@ The application uses an embedded **SQLite** database using `sql.js` (compiled to
    ```
 
 ### Multi-Tenant Isolation
-
 Every study data record is strictly bound to the authenticated user's ID (`usr_<username>_<entropy>`). No user can view, edit, or delete another user's records.
 
 ---
@@ -234,15 +227,15 @@ Every study data record is strictly bound to the authenticated user's ID (`usr_<
 
 All protected endpoints require an `Authorization: Bearer <token>` HTTP header.
 
-| Method | Endpoint                    |  Protection  | Description                                                 |
-| :----- | :-------------------------- | :----------: | :---------------------------------------------------------- |
-| `GET`  | `/api/health`               |    Public    | Server and database health check                            |
-| `POST` | `/api/auth/register`        |    Public    | Register a new account (`username`, `password`)             |
-| `POST` | `/api/auth/login`           |    Public    | Authenticate user and receive signed JWT                    |
-| `GET`  | `/api/auth/me`              | Bearer Token | Validate existing token and return user profile             |
-| `GET`  | `/api/gate/data`            | Bearer Token | Retrieve all subjects, chapters, revisions, pyqs, and exams |
-| `PUT`  | `/api/gate/data`            | Bearer Token | Atomically save user study workspace                        |
-| `POST` | `/api/gate/reset`           | Bearer Token | Reset workspace to fresh empty slate (`0` records)          |
+| Method | Endpoint | Protection | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/health` | Public | Server and database health check |
+| `POST` | `/api/auth/register` | Public | Register a new account (`username`, `password`) |
+| `POST` | `/api/auth/login` | Public | Authenticate user and receive signed JWT |
+| `GET` | `/api/auth/me` | Bearer Token | Validate existing token and return user profile |
+| `GET` | `/api/gate/data` | Bearer Token | Retrieve all subjects, chapters, revisions, pyqs, and exams |
+| `PUT` | `/api/gate/data` | Bearer Token | Atomically save user study workspace |
+| `POST` | `/api/gate/reset` | Bearer Token | Reset workspace to fresh empty slate (`0` records) |
 | `POST` | `/api/gate/import-template` | Bearer Token | Import the standard GATE Computer Science syllabus template |
 
 ---
@@ -256,7 +249,6 @@ npx tsx scripts/verify_production.mjs
 ```
 
 This validates:
-
 - Health check endpoints
 - SQLite database initialization
 - User registration and bcrypt password hashing

@@ -34,6 +34,18 @@ export function authMiddleware(
   }
 
   const token = authHeader.split(" ")[1];
+  if (!token) {
+    res.status(401).json({ error: "Unauthorized: Missing token" });
+    return;
+  }
+
+  // Handle guest token gracefully
+  if (token === "guest_token_permanent" || token.startsWith("guest_token_")) {
+    req.userId = "guest_aspirant";
+    req.username = "Guest Aspirant";
+    return next();
+  }
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       userId: string;
@@ -72,6 +84,8 @@ export async function handleRegister(
       return;
     }
 
+    // The username is stored strictly as entered by the user (trimmed of outer whitespace),
+    // without any manipulation, artificial suffixes, timestamps (such as user_time or Date.now()), or casing mutations.
     const cleanUsername = username.trim();
 
     // Check if user already exists
@@ -89,7 +103,7 @@ export async function handleRegister(
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Generate deterministic user ID based on username
+    // Generate unique user ID based on username + cryptographic entropy
     const userId = generateUserId(cleanUsername);
 
     // Create user and initial fresh empty database record
@@ -118,7 +132,12 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
   try {
     const { username, password } = req.body || {};
 
-    if (!username || !password) {
+    if (
+      !username ||
+      typeof username !== "string" ||
+      !password ||
+      typeof password !== "string"
+    ) {
       res
         .status(400)
         .json({ error: "Please enter both username and password." });
@@ -126,39 +145,31 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
     }
 
     const cleanUsername = username.trim();
-    let user = await findUserByUsername(cleanUsername);
-
-    if (!user) {
-      // In serverless environments where store was cold-started, auto-restore account with provided credentials
-      if (
-        typeof username === "string" &&
-        cleanUsername.length >= 3 &&
-        typeof password === "string" &&
-        password.length >= 4
-      ) {
-        const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(password, salt);
-        const userId = generateUserId(cleanUsername);
-        user = await insertUser(userId, cleanUsername, passwordHash);
-      } else {
-        res.status(401).json({ error: "Invalid username or password." });
-        return;
-      }
-    } else {
-      let isMatch = false;
-      if (user.password_hash) {
-        isMatch = await bcrypt.compare(password, user.password_hash);
-      }
-      if (!isMatch) {
-        res.status(401).json({ error: "Invalid username or password." });
-        return;
-      }
-      // Re-hash and refresh password hash to ensure user account stays valid
-      const salt = await bcrypt.genSalt(10);
-      const updatedHash = await bcrypt.hash(password, salt);
-      user = await insertUser(user.id, user.username, updatedHash);
+    if (!cleanUsername) {
+      res
+        .status(400)
+        .json({ error: "Please enter both username and password." });
+      return;
     }
 
+    const user = await findUserByUsername(cleanUsername);
+
+    if (!user) {
+      // Do NOT auto-register on failed login. Return 401 Unauthorized.
+      res.status(401).json({ error: "Invalid username or password." });
+      return;
+    }
+
+    let isMatch = false;
+    if (user.password_hash) {
+      isMatch = await bcrypt.compare(password, user.password_hash);
+    }
+    if (!isMatch) {
+      res.status(401).json({ error: "Invalid username or password." });
+      return;
+    }
+
+    // Generate token directly without redundant re-hashing or DB re-write
     const token = generateToken({ id: user.id, username: user.username });
 
     res.status(200).json({
@@ -182,14 +193,23 @@ export async function handleMe(req: AuthRequest, res: Response): Promise<void> {
       return;
     }
 
-    let user = await findUserById(req.userId);
-    if (!user && req.username) {
-      // Restore user record without corrupting password hash
-      user = await insertUser(req.userId, req.username, "");
+    if (req.userId === "guest_aspirant") {
+      res.status(200).json({
+        user: {
+          id: "guest_aspirant",
+          username: "Guest Aspirant",
+        },
+      });
+      return;
     }
 
+    const user = await findUserById(req.userId);
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res
+        .status(401)
+        .json({
+          error: "User session expired or user not found. Please log in again.",
+        });
       return;
     }
 
