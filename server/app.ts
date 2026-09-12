@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import {
   handleRegister,
   handleLogin,
+  handleGuestToken,
+  handleLogout,
   handleMe,
   authMiddleware,
   AuthRequest,
@@ -28,6 +30,32 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Simple in-memory rate limiter for sensitive authentication endpoints
+const authRateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+function authRateLimiter(req: Request, res: Response, next: NextFunction): void {
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown-ip';
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000; // 15 minutes window
+  const maxRequests = 15; // Max 15 login/register attempts per IP per window
+
+  const record = authRateLimitMap.get(clientIp);
+  if (!record || now > record.resetTime) {
+    authRateLimitMap.set(clientIp, { count: 1, resetTime: now + windowMs });
+    return next();
+  }
+
+  if (record.count >= maxRequests) {
+    res.status(429).json({
+      error: 'Too many authentication attempts. Please try again after 15 minutes.',
+    });
+    return;
+  }
+
+  record.count += 1;
+  next();
+}
+
 const apiRouter = express.Router();
 
 // Health check
@@ -41,8 +69,10 @@ apiRouter.get('/health', (req: Request, res: Response) => {
 });
 
 // Authentication endpoints
-apiRouter.post('/auth/register', handleRegister);
-apiRouter.post('/auth/login', handleLogin);
+apiRouter.post('/auth/register', authRateLimiter, handleRegister);
+apiRouter.post('/auth/login', authRateLimiter, handleLogin);
+apiRouter.post('/auth/guest', handleGuestToken);
+apiRouter.post('/auth/logout', handleLogout);
 apiRouter.get('/auth/me', authMiddleware, handleMe);
 
 // Study Data endpoints (Protected by JWT)

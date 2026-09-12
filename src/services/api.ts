@@ -103,8 +103,30 @@ export const api = {
       return request<{ user: AuthUser }>('/api/auth/me');
     },
 
-    logout: () => {
-      clearStoredAuth();
+    guest: async (): Promise<AuthResponse> => {
+      try {
+        const res = await request<AuthResponse>('/api/auth/guest', {
+          method: 'POST',
+        });
+        setStoredToken(res.token, res.user);
+        return res;
+      } catch (err) {
+        // Fallback for offline guest token creation
+        const guestUser: AuthUser = { id: 'guest_aspirant', username: 'Guest Aspirant' };
+        const guestToken = 'guest_token_permanent';
+        setStoredToken(guestToken, guestUser);
+        return { token: guestToken, user: guestUser };
+      }
+    },
+
+    logout: async () => {
+      try {
+        await request('/api/auth/logout', { method: 'POST' });
+      } catch (e) {
+        // Ignore logout network errors and clean local state
+      } finally {
+        clearStoredAuth();
+      }
     },
   },
 

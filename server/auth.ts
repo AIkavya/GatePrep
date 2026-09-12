@@ -9,17 +9,52 @@ import {
 } from "./db.js";
 
 const JWT_SECRET =
-  process.env.JWT_SECRET || "gate-prep-super-secret-jwt-key-2026";
+  process.env.JWT_SECRET ||
+  (process.env.NODE_ENV === "production"
+    ? (() => {
+        throw new Error(
+          "CRITICAL SECURITY ERROR: JWT_SECRET environment variable must be set in production!",
+        );
+      })()
+    : "gate-prep-super-secret-jwt-key-2026");
+
+// Default token lifespan for production security: 7 days
+const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 export interface AuthRequest extends Request {
   userId?: string;
   username?: string;
+  isGuest?: boolean;
 }
 
-export function generateToken(user: { id: string; username: string }): string {
-  return jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, {
-    expiresIn: "36500d",
-  });
+export interface TokenPayload {
+  userId: string;
+  username: string;
+  isGuest?: boolean;
+}
+
+export function generateToken(
+  user: { id: string; username: string; isGuest?: boolean },
+  expiresIn: string = TOKEN_EXPIRES_IN,
+): string {
+  return jwt.sign(
+    { userId: user.id, username: user.username, isGuest: !!user.isGuest },
+    JWT_SECRET,
+    { expiresIn: expiresIn as any },
+  );
+}
+
+export function validatePassword(password: string): { valid: boolean; message?: string } {
+  if (!password || typeof password !== "string") {
+    return { valid: false, message: "Password is required." };
+  }
+  if (password.length < 8) {
+    return { valid: false, message: "Password must be at least 8 characters long." };
+  }
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    return { valid: false, message: "Password must contain both letters and numbers." };
+  }
+  return { valid: true };
 }
 
 export function authMiddleware(
@@ -29,7 +64,7 @@ export function authMiddleware(
 ): void {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+    res.status(401).json({ error: "Unauthorized: Missing or invalid token format" });
     return;
   }
 
@@ -39,23 +74,22 @@ export function authMiddleware(
     return;
   }
 
-  // Handle guest token gracefully
+  // Gracefully handle legacy guest tokens during session transition
   if (token === "guest_token_permanent" || token.startsWith("guest_token_")) {
     req.userId = "guest_aspirant";
     req.username = "Guest Aspirant";
+    req.isGuest = true;
     return next();
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      username: string;
-    };
+    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
     req.userId = decoded.userId;
     req.username = decoded.username;
+    req.isGuest = decoded.isGuest;
     next();
-  } catch (err) {
-    res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+  } catch (err: any) {
+    res.status(401).json({ error: "Unauthorized: Invalid or expired token. Please log in again." });
   }
 }
 
@@ -77,39 +111,35 @@ export async function handleRegister(
       return;
     }
 
-    if (!password || typeof password !== "string" || password.length < 4) {
-      res
-        .status(400)
-        .json({ error: "Password must be at least 4 characters long." });
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      res.status(400).json({ error: passwordValidation.message });
       return;
     }
 
-    // The username is stored strictly as entered by the user (trimmed of outer whitespace),
-    // without any manipulation, artificial suffixes, timestamps (such as user_time or Date.now()), or casing mutations.
-    const cleanUsername = username.trim();
+    // Standardize clean username lowercased to avoid duplicate account collision attacks
+    const cleanUsername = username.trim().toLowerCase();
 
     // Check if user already exists
     const existing = await findUserByUsername(cleanUsername);
     if (existing) {
-      res
-        .status(409)
-        .json({
-          error: "Username is already taken. Please choose another or log in.",
-        });
+      res.status(409).json({
+        error: "Username is already taken. Please choose another or log in.",
+      });
       return;
     }
 
-    // Hash password with bcrypt
+    // Hash password securely with bcrypt (10 rounds)
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Generate unique user ID based on username + cryptographic entropy
+    // Generate unique user ID
     const userId = generateUserId(cleanUsername);
 
-    // Create user and initial fresh empty database record
+    // Create user record in database
     const newUser = await insertUser(userId, cleanUsername, passwordHash);
 
-    // Generate permanent JWT token
+    // Generate secure 7-day JWT token
     const token = generateToken({ id: newUser.id, username: newUser.username });
 
     res.status(201).json({
@@ -144,7 +174,7 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const cleanUsername = username.trim();
+    const cleanUsername = username.trim().toLowerCase();
     if (!cleanUsername) {
       res
         .status(400)
@@ -155,7 +185,6 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
     const user = await findUserByUsername(cleanUsername);
 
     if (!user) {
-      // Do NOT auto-register on failed login. Return 401 Unauthorized.
       res.status(401).json({ error: "Invalid username or password." });
       return;
     }
@@ -169,7 +198,7 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Generate token directly without redundant re-hashing or DB re-write
+    // Generate secure 7-day token
     const token = generateToken({ id: user.id, username: user.username });
 
     res.status(200).json({
@@ -184,6 +213,35 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
     console.error("Error in handleLogin:", error);
     res.status(500).json({ error: "Internal server error during login." });
   }
+}
+
+export async function handleGuestToken(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  try {
+    const guestUser = {
+      id: "guest_aspirant",
+      username: "Guest Aspirant",
+      isGuest: true,
+    };
+    const token = generateToken(guestUser, "24h");
+    res.status(200).json({
+      message: "Guest session initialized.",
+      token,
+      user: guestUser,
+    });
+  } catch (error: any) {
+    console.error("Error generating guest token:", error);
+    res.status(500).json({ error: "Failed to initialize guest session." });
+  }
+}
+
+export async function handleLogout(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  res.status(200).json({ message: "Logged out successfully." });
 }
 
 export async function handleMe(req: AuthRequest, res: Response): Promise<void> {

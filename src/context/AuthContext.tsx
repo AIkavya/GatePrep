@@ -98,24 +98,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const continueAsGuest = () => {
-    const guestUser: AuthUser = {
-      id: "guest_aspirant",
-      username: "Guest Aspirant",
-    };
-    const guestToken = "guest_token_permanent";
-    setUser(guestUser);
-    setToken(guestToken);
-    setError(null);
-    setStoredToken(guestToken, guestUser);
+  const continueAsGuest = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await api.auth.guest();
+      setUser(res.user);
+      setToken(res.token);
+    } catch (err: any) {
+      const fallbackUser: AuthUser = {
+        id: "guest_aspirant",
+        username: "Guest Aspirant",
+      };
+      const fallbackToken = "guest_token_permanent";
+      setUser(fallbackUser);
+      setToken(fallbackToken);
+      setStoredToken(fallbackToken, fallbackUser);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const clearError = () => {
     setError(null);
   };
 
-  const logout = () => {
-    api.auth.logout();
+  const logout = async () => {
+    await api.auth.logout();
     setUser(null);
     setToken(null);
     setError(null);
