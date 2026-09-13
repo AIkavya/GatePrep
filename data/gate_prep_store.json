@@ -1,0 +1,176 @@
+{
+  "users": [
+    {
+      "id": "usr_kp2310_jokmgaks",
+      "username": "kp2310",
+      "password_hash": "$2b$10$BI8q8qMsNXmwhDa/tlJGlOJiOTVfSLd7u92tfNr4IDln7xws1uxEa",
+      "created_at": "2026-09-13T20:39:53.469Z"
+    }
+  ],
+  "studyData": {
+    "guest_aspirant": {
+      "subjects": [],
+      "chapters": [],
+      "revisions": [],
+      "pyqs": [],
+      "pyqQueue": [],
+      "calendarEvents": [],
+      "exams": [],
+      "revisionSettings": {
+        "rev1Days": 7,
+        "rev2Days": 14,
+        "rev3Days": 28
+      }
+    },
+    "usr_kp2310_jokmgaks": {
+      "subjects": [
+        {
+          "name": "Database Management Systerm",
+          "code": "DBMS",
+          "description": "Syllabus is Completed",
+          "color": "#2563eb",
+          "totalRevisionsCount": 0,
+          "entirePyqSolvedCount": 0,
+          "subjectTestsCount": 0,
+          "id": "sub-1789332034066-h4oy465"
+        },
+        {
+          "name": "Theory Of Computation",
+          "code": "TOC",
+          "description": "",
+          "color": "#059669",
+          "totalRevisionsCount": 0,
+          "entirePyqSolvedCount": 0,
+          "subjectTestsCount": 0,
+          "id": "sub-1789332273673-d8ekfnl"
+        },
+        {
+          "name": "Computer Network",
+          "code": "CN",
+          "description": "",
+          "color": "#ea580c",
+          "totalRevisionsCount": 0,
+          "entirePyqSolvedCount": 0,
+          "subjectTestsCount": 0,
+          "id": "sub-1789332315116-d5grt7p"
+        }
+      ],
+      "chapters": [
+        {
+          "subjectId": "sub-1789332034066-h4oy465",
+          "name": "Relational Model , Keys and Normalization",
+          "priority": 10,
+          "progress": 100,
+          "status": "completed",
+          "notes": "",
+          "revisionCount": 0,
+          "pyqsSolvedCount": 0,
+          "pyqFullCyclesCount": 0,
+          "id": "chap-1789332061543-nux5z67",
+          "createdAt": "2026-09-14",
+          "completedAt": "2026-09-14"
+        },
+        {
+          "subjectId": "sub-1789332034066-h4oy465",
+          "name": "ER Model",
+          "priority": 9,
+          "progress": 100,
+          "status": "completed",
+          "notes": "",
+          "revisionCount": 0,
+          "pyqsSolvedCount": 0,
+          "pyqFullCyclesCount": 0,
+          "id": "chap-1789332085249-jmxirm6",
+          "createdAt": "2026-09-14",
+          "completedAt": "2026-09-14"
+        },
+        {
+          "subjectId": "sub-1789332034066-h4oy465",
+          "name": "Transaction and Concurrency Control",
+          "priority": 8,
+          "progress": 100,
+          "status": "completed",
+          "notes": "",
+          "revisionCount": 0,
+          "pyqsSolvedCount": 0,
+          "pyqFullCyclesCount": 0,
+          "id": "chap-1789332122618-apuragz",
+          "createdAt": "2026-09-14",
+          "completedAt": "2026-09-14"
+        },
+        {
+          "subjectId": "sub-1789332034066-h4oy465",
+          "name": "Relational Algebra , SQL and TRC",
+          "priority": 7,
+          "progress": 100,
+          "status": "completed",
+          "notes": "",
+          "revisionCount": 0,
+          "pyqsSolvedCount": 0,
+          "pyqFullCyclesCount": 0,
+          "id": "chap-1789332145347-gtbkcxn",
+          "createdAt": "2026-09-14",
+          "completedAt": "2026-09-14"
+        },
+        {
+          "subjectId": "sub-1789332034066-h4oy465",
+          "name": "File Organization and Indexing",
+          "priority": 7,
+          "progress": 100,
+          "status": "completed",
+          "notes": "",
+          "revisionCount": 0,
+          "pyqsSolvedCount": 0,
+          "pyqFullCyclesCount": 0,
+          "id": "chap-1789332174423-jvl6qi0",
+          "createdAt": "2026-09-14",
+          "completedAt": "2026-09-14"
+        }
+      ],
+      "revisions": [],
+      "pyqs": [],
+      "pyqQueue": [],
+      "calendarEvents": [
+        {
+          "subjectId": "sub-1789332034066-h4oy465",
+          "title": "Exam DBMS",
+          "type": "other",
+          "date": "2026-09-15",
+          "status": "pending",
+          "id": "cal-1789332474832-6kxqnq0"
+        },
+        {
+          "subjectId": "sub-1789332273673-d8ekfnl",
+          "title": "TOC Begin...",
+          "type": "learning",
+          "date": "2026-09-15",
+          "status": "pending",
+          "id": "cal-1789332502066-rhilq6n"
+        },
+        {
+          "subjectId": "sub-1789332034066-h4oy465",
+          "title": "Complete DBMS Question Practice",
+          "type": "pyq",
+          "date": "2026-09-14",
+          "status": "pending",
+          "id": "cal-1789332533601-fosbfad"
+        },
+        {
+          "subjectId": "sub-1789332034066-h4oy465",
+          "title": "Complete DBMS Revision",
+          "type": "revision",
+          "date": "2026-09-14",
+          "status": "pending",
+          "id": "cal-1789332549775-beabujq"
+        }
+      ],
+      "exams": [],
+      "revisionSettings": {
+        "rev1Days": 7,
+        "rev2Days": 14,
+        "rev3Days": 28
+      }
+    }
+  },
+  "updatedAt": "2026-09-13T21:00:30.604Z"
+}

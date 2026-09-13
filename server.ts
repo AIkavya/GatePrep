@@ -1,9 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { app } from './server/app.js';
 
-const PORT = 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
 function resolveDistDirectory(): string {
   // Check common deployment directory structures
@@ -26,12 +27,8 @@ function resolveDistDirectory(): string {
 
 async function startServer() {
   const distPath = resolveDistDirectory();
-  const hasDistIndex = fs.existsSync(path.join(distPath, 'index.html'));
   const isBundled = typeof __filename !== 'undefined' && __filename.endsWith('.cjs');
-  const isProduction =
-    process.env.NODE_ENV === 'production' ||
-    isBundled ||
-    (process.env.NODE_ENV !== 'development' && hasDistIndex);
+  const isProduction = process.env.NODE_ENV === 'production' || isBundled;
 
   if (!isProduction) {
     // In development mode, dynamically import Vite so it is never loaded in production

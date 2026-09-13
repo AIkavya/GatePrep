@@ -63,7 +63,7 @@ apiRouter.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    database: 'SQLite (sql.js WASM) with JSON fallback',
+    database: 'MongoDB (Mongoose)',
     jwtAuth: 'enabled',
   });
 });

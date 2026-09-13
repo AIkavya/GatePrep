@@ -33,7 +33,7 @@ A high-performance, distraction-free study management platform designed specific
 - **Automated Spaced Repetition Engine**: Calculates real-time revision due dates based on the forgetting curve (configurable: default 7, 14, and 28-day intervals). Revisions dynamically categorize as *Due Today*, *Overdue*, *Upcoming*, or *Completed*.
 - **10,000+ PYQ Question Bank & Focus Queue**: Practice questions filtered by year (1990–Present), subject, chapter, status, and difficulty. Includes interactive step-by-step mathematical solutions and cycle counters.
 - **Mock Exam Analytics Engine**: Log and evaluate Full-Length Mocks (65 questions, 100 marks, 180 mins), Subject Tests, and Topic Tests. Automatically calculates net score, accuracy percentage, negative marking penalties (1/3 and 2/3 deductions), and flags weak vs. strong topics.
-- **Multi-Tenant SQLite Persistence**: Lightweight, zero-config relational database powered by `sql.js` (WebAssembly) with dual-layer JSON write-through fallback to guarantee zero data loss across container cold starts.
+- **Multi-Tenant MongoDB Persistence**: Relational-like user isolation powered by `mongoose` & MongoDB.
 - **Multi-Tab Session Synchronization**: JWT session tokens are verified on both the server and client. Changes in login status in one tab instantly propagate to all other open tabs without requiring manual page reloads.
 - **Apple-Inspired Minimalist Interface**: Built with high-contrast typography, generous padding, and full support for both Light and Dark themes.
 
@@ -51,10 +51,10 @@ A high-performance, distraction-free study management platform designed specific
 │                    Express Backend                      │
 │      JWT Auth (HS256) • Bcrypt • RESTful Endpoints      │
 └────────────────────────────┬────────────────────────────┘
-                             │  Transactions & WAL
+                             │  Mongoose Connection
 ┌────────────────────────────▼────────────────────────────┐
-│                Dual-Layer Storage Engine                │
-│    SQLite (sql.js WebAssembly) + JSON Backup Store      │
+│                   MongoDB Database                      │
+│         User & StudyData Collections (Mongoose)         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -65,7 +65,7 @@ A high-performance, distraction-free study management platform designed specific
 | **Icons** | Lucide React |
 | **Server Runtime** | Node.js, Express.js |
 | **Authentication** | JSON Web Tokens (`jsonwebtoken`), `bcryptjs` |
-| **Database** | SQLite via `sql.js` (WASM) with dual-layer JSON write-through |
+| **Database** | MongoDB via `mongoose` |
 | **Tooling & Build** | `esbuild`, `tsx`, Vite |
 
 ---

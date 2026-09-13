@@ -1,7 +1,4 @@
-import initSqlJs from "sql.js";
-import type { Database } from "sql.js";
-import fs from "fs";
-import path from "path";
+import mongoose, { Schema } from "mongoose";
 
 export interface UserRecord {
   id: string;
@@ -21,100 +18,256 @@ export interface StudyDataRecord {
   revisionSettings: any;
 }
 
-let dbInstance: Database | null = null;
-let dbPath: string = "";
-let isFallbackMode = false;
+// 1. User Schema
+const UserSchema = new Schema(
+  {
+    userId: { type: String, required: true, unique: true, index: true },
+    username: { type: String, required: true, unique: true, index: true },
+    password_hash: { type: String, required: true },
+    created_at: { type: String, required: true },
+  },
+  { timestamps: true }
+);
 
-// In-memory fallback structures in case sql.js WASM cannot load in serverless
-const memoryUsers = new Map<string, UserRecord>();
-const memoryStudyData = new Map<string, StudyDataRecord>();
-let fallbackJsonPath = "";
+export const UserModel: any =
+  mongoose.models.User || mongoose.model("User", UserSchema);
 
-function getWritableDataDir(): string {
-  const isVercel = process.env.VERCEL === "1";
-  if (isVercel) {
-    return "/tmp";
+// 2. Subject Schema
+const SubjectSchema = new Schema(
+  {
+    userId: { type: String, required: true, index: true },
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    code: { type: String, default: "" },
+    description: { type: String, default: "" },
+    color: { type: String, default: "#3b82f6" },
+    totalRevisionsCount: { type: Number, default: 0 },
+    entirePyqSolvedCount: { type: Number, default: 0 },
+    subjectTestsCount: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+SubjectSchema.index({ userId: 1, id: 1 }, { unique: true });
+
+export const SubjectModel: any =
+  mongoose.models.Subject || mongoose.model("Subject", SubjectSchema);
+
+// 3. Chapter Schema
+const ChapterSchema = new Schema(
+  {
+    userId: { type: String, required: true, index: true },
+    id: { type: String, required: true },
+    subjectId: { type: String, required: true, index: true },
+    name: { type: String, required: true },
+    priority: { type: Number, default: 10 },
+    progress: { type: Number, default: 0 },
+    status: { type: String, default: "not_started" },
+    notes: { type: String, default: "" },
+    createdAt: { type: String },
+    completedAt: { type: String },
+    revisionCount: { type: Number, default: 0 },
+    pyqsSolvedCount: { type: Number, default: 0 },
+    pyqFullCyclesCount: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+ChapterSchema.index({ userId: 1, id: 1 }, { unique: true });
+ChapterSchema.index({ userId: 1, subjectId: 1 });
+
+export const ChapterModel: any =
+  mongoose.models.Chapter || mongoose.model("Chapter", ChapterSchema);
+
+// 4. Revision Schema
+const RevisionSchema = new Schema(
+  {
+    userId: { type: String, required: true, index: true },
+    id: { type: String, required: true },
+    subjectId: { type: String, required: true, index: true },
+    chapterId: { type: String, required: true, index: true },
+    revisionNumber: { type: Number, default: 1 },
+    dueDate: { type: String, required: true },
+    status: { type: String, default: "upcoming" },
+    priority: { type: Number, default: 10 },
+    progress: { type: Number, default: 0 },
+    notes: { type: String, default: "" },
+    completedAt: { type: String },
+    completedDate: { type: String },
+  },
+  { timestamps: true }
+);
+RevisionSchema.index({ userId: 1, id: 1 }, { unique: true });
+RevisionSchema.index({ userId: 1, subjectId: 1, chapterId: 1 });
+
+export const RevisionModel: any =
+  mongoose.models.Revision || mongoose.model("Revision", RevisionSchema);
+
+// 5. PYQ Schema (Optimized for 10,000+ Questions)
+const PyqSchema = new Schema(
+  {
+    userId: { type: String, required: true, index: true },
+    id: { type: String, required: true },
+    subjectId: { type: String, required: true, index: true },
+    chapterId: { type: String, required: true, index: true },
+    year: { type: Number, required: true, index: true },
+    marks: { type: Number, default: 1 },
+    questionNumber: { type: Schema.Types.Mixed },
+    question: { type: String },
+    questionText: { type: String },
+    imageUrl: { type: String, default: "" },
+    answer: { type: String },
+    explanation: { type: String },
+    options: { type: [String], default: [] },
+    correctOption: { type: Schema.Types.Mixed },
+    correctOptions: { type: [Number], default: [] },
+    numericalAnswer: { type: Schema.Types.Mixed },
+    isNumerical: { type: Boolean, default: false },
+    isNat: { type: Boolean, default: false },
+    natAnswerRange: { type: Schema.Types.Mixed },
+    questionType: { type: String, default: "mcq" },
+    difficulty: { type: String, default: "medium" },
+    status: { type: String, default: "not_attempted" },
+    notes: { type: String, default: "" },
+    userNotes: { type: String, default: "" },
+    solvedAt: { type: String },
+  },
+  { timestamps: true }
+);
+PyqSchema.index({ userId: 1, id: 1 }, { unique: true });
+PyqSchema.index({ userId: 1, subjectId: 1, chapterId: 1 });
+PyqSchema.index({ userId: 1, year: 1, subjectId: 1 });
+
+export const PyqModel: any =
+  mongoose.models.Pyq || mongoose.model("Pyq", PyqSchema);
+
+// 6. PyqQueue Schema
+const PyqQueueSchema = new Schema(
+  {
+    userId: { type: String, required: true, index: true },
+    id: { type: String, required: true },
+    subjectId: { type: String, required: true, index: true },
+    chapterId: { type: String, required: true, index: true },
+    priority: { type: Number, default: 10 },
+    targetQuestions: { type: Number, default: 10 },
+    solvedQuestions: { type: Number, default: 0 },
+    progress: { type: Number, default: 0 },
+    status: { type: String, default: "not_started" },
+    notes: { type: String, default: "" },
+    createdAt: { type: String },
+    completedAt: { type: String },
+  },
+  { timestamps: true }
+);
+PyqQueueSchema.index({ userId: 1, id: 1 }, { unique: true });
+PyqQueueSchema.index({ userId: 1, subjectId: 1 });
+
+export const PyqQueueModel: any =
+  mongoose.models.PyqQueue || mongoose.model("PyqQueue", PyqQueueSchema);
+
+// 7. CalendarEvent Schema
+const CalendarEventSchema = new Schema(
+  {
+    userId: { type: String, required: true, index: true },
+    id: { type: String, required: true },
+    subjectId: { type: String },
+    chapterId: { type: String },
+    revisionId: { type: String },
+    title: { type: String, required: true },
+    date: { type: String, required: true, index: true },
+    time: { type: String },
+    type: { type: String, default: "other" },
+    status: { type: String, default: "pending" },
+    notes: { type: String, default: "" },
+  },
+  { timestamps: true }
+);
+CalendarEventSchema.index({ userId: 1, id: 1 }, { unique: true });
+CalendarEventSchema.index({ userId: 1, date: 1 });
+
+export const CalendarEventModel: any =
+  mongoose.models.CalendarEvent ||
+  mongoose.model("CalendarEvent", CalendarEventSchema);
+
+// 8. Exam Schema
+const ExamSchema = new Schema(
+  {
+    userId: { type: String, required: true, index: true },
+    id: { type: String, required: true },
+    title: { type: String, required: true },
+    examType: { type: String, default: "full_length" },
+    subjectId: { type: String },
+    chapterId: { type: String },
+    subjectIds: { type: [String], default: [] },
+    chapterIds: { type: [String], default: [] },
+    questionTypes: { type: [String], default: [] },
+    syllabusScope: { type: String },
+    completionStatus: { type: String },
+    date: { type: String, required: true },
+    durationMinutes: { type: Number, default: 180 },
+    totalMarks: { type: Number, default: 100 },
+    obtainedMarks: { type: Number },
+    percentage: { type: Number },
+    accuracy: { type: Number },
+    status: { type: String, default: "completed" },
+    timeTakenMinutes: { type: Number },
+    totalQuestions: { type: Number },
+    attemptedQuestions: { type: Number },
+    correctQuestions: { type: Number },
+    wrongQuestions: { type: Number },
+    positiveMarks: { type: Number },
+    negativeMarks: { type: Number },
+    weakTopics: { type: [String], default: [] },
+    strongTopics: { type: [String], default: [] },
+    notes: { type: String, default: "" },
+    reportData: { type: Schema.Types.Mixed },
+    createdAt: { type: String },
+  },
+  { timestamps: true }
+);
+ExamSchema.index({ userId: 1, id: 1 }, { unique: true });
+
+export const ExamModel: any =
+  mongoose.models.Exam || mongoose.model("Exam", ExamSchema);
+
+// 9. UserSettings Schema
+const UserSettingsSchema = new Schema(
+  {
+    userId: { type: String, required: true, unique: true, index: true },
+    revisionSettings: {
+      type: Schema.Types.Mixed,
+      default: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
+    },
+  },
+  { timestamps: true }
+);
+
+export const UserSettingsModel: any =
+  mongoose.models.UserSettings ||
+  mongoose.model("UserSettings", UserSettingsSchema);
+
+// MongoDB connection handling
+let isConnected = false;
+
+export async function connectDb(): Promise<boolean> {
+  if (isConnected && mongoose.connection.readyState === 1) {
+    return true;
   }
 
-  // Attempt local ./data directory first
-  const preferredDir = path.join(process.cwd(), "data");
-  try {
-    if (!fs.existsSync(preferredDir)) {
-      fs.mkdirSync(preferredDir, { recursive: true });
-    }
-    // Verify write permissions
-    const testFile = path.join(preferredDir, ".perm_test_" + Date.now());
-    fs.writeFileSync(testFile, "1");
-    fs.unlinkSync(testFile);
-    return preferredDir;
-  } catch (e) {
-    console.warn("Cannot write to data directory, falling back to /tmp:", e);
-  }
+  const mongoUri =
+    process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/gate_prep";
 
-  // Fallback to /tmp which is writable on all Linux, Docker, and Cloud Run environments
-  const tmpDir = path.join("/tmp", "gate_prep_data");
   try {
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-    return tmpDir;
-  } catch (e2) {
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    isConnected = true;
+    console.log(`Connected successfully to MongoDB at ${mongoUri}`);
+    return true;
+  } catch (err) {
     console.warn(
-      "Failed creating /tmp/gate_prep_data, using /tmp directly:",
-      e2,
+      `MongoDB connection attempt to ${mongoUri} failed. Make sure MongoDB is running locally or set MONGODB_URI:`,
+      err
     );
-    return "/tmp";
-  }
-}
-
-function loadFallbackData(): void {
-  const dataDir = getWritableDataDir();
-  fallbackJsonPath = path.join(dataDir, "gate_prep_store.json");
-  if (fs.existsSync(fallbackJsonPath)) {
-    try {
-      const raw = fs.readFileSync(fallbackJsonPath, "utf8");
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.users)) {
-        parsed.users.forEach((u: UserRecord) => memoryUsers.set(u.id, u));
-      }
-      if (parsed.studyData && typeof parsed.studyData === "object") {
-        Object.entries(parsed.studyData).forEach(([k, v]) =>
-          memoryStudyData.set(k, v as StudyDataRecord),
-        );
-      }
-    } catch (e) {
-      console.warn(
-        "Could not read fallback JSON store, starting fresh in-memory:",
-        e,
-      );
-    }
-  }
-}
-
-function persistFallbackData(): void {
-  if (!fallbackJsonPath) {
-    fallbackJsonPath = path.join(getWritableDataDir(), "gate_prep_store.json");
-  }
-  try {
-    const payload = {
-      users: Array.from(memoryUsers.values()),
-      studyData: Object.fromEntries(memoryStudyData.entries()),
-      updatedAt: new Date().toISOString(),
-    };
-    fs.writeFileSync(fallbackJsonPath, JSON.stringify(payload, null, 2));
-  } catch (e) {
-    console.warn("Could not persist fallback JSON to disk:", e);
-  }
-}
-
-function getCurrentDir(): string {
-  if (typeof __dirname !== "undefined") {
-    return __dirname;
-  }
-  try {
-    return path.dirname(new URL(import.meta.url).pathname);
-  } catch {
-    return process.cwd();
+    return false;
   }
 }
 
@@ -128,243 +281,168 @@ export function generateUserId(username: string): string {
   return `usr_${clean}_${entropy}`;
 }
 
-export async function getDb(): Promise<Database | null> {
-  if (isFallbackMode) return null;
-  if (dbInstance) return dbInstance;
-
-  try {
-    const currentDir = getCurrentDir();
-    // Pre-warm in-memory structures from backup store
-    loadFallbackData();
-
-    // Ensure guest user data exists in memory
-    if (!memoryStudyData.has("guest_aspirant")) {
-      memoryStudyData.set("guest_aspirant", {
-        subjects: [],
-        chapters: [],
-        revisions: [],
-        pyqs: [],
-        pyqQueue: [],
-        calendarEvents: [],
-        exams: [],
-        revisionSettings: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
-      });
-    }
-
-    // Attempt locating sql-wasm.wasm across common bundle and filesystem paths
-    const SQL = await initSqlJs({
-      locateFile: (file: string) => {
-        const candidates = [
-          path.join(process.cwd(), "node_modules", "sql.js", "dist", file),
-          path.join(currentDir, file),
-          path.join(currentDir, "..", "node_modules", "sql.js", "dist", file),
-          path.join("/var/task", "node_modules", "sql.js", "dist", file),
-          path.join("/var/task", file),
-        ];
-        for (const candidate of candidates) {
-          if (fs.existsSync(candidate)) {
-            return candidate;
-          }
-        }
-        return file;
-      },
-    });
-
-    const dataDir = getWritableDataDir();
-    dbPath = path.join(dataDir, "gate_prep.sqlite");
-
-    if (fs.existsSync(dbPath)) {
-      try {
-        const fileBuffer = fs.readFileSync(dbPath);
-        dbInstance = new SQL.Database(fileBuffer);
-      } catch (err) {
-        console.error(
-          "Failed to read existing SQLite DB file, creating fresh database:",
-          err,
-        );
-        dbInstance = new SQL.Database();
-      }
-    } else {
-      dbInstance = new SQL.Database();
-    }
-
-    // Enable foreign keys
-    dbInstance.run("PRAGMA foreign_keys = ON;");
-
-    // Initialize SQLite schema
-    dbInstance.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        username TEXT UNIQUE COLLATE NOCASE,
-        password_hash TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS study_data (
-        user_id TEXT PRIMARY KEY,
-        subjects_json TEXT DEFAULT '[]',
-        chapters_json TEXT DEFAULT '[]',
-        revisions_json TEXT DEFAULT '[]',
-        pyqs_json TEXT DEFAULT '[]',
-        pyq_queue_json TEXT DEFAULT '[]',
-        calendar_json TEXT DEFAULT '[]',
-        exams_json TEXT DEFAULT '[]',
-        settings_json TEXT DEFAULT '{}',
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-    `);
-
-    persistDb();
-    return dbInstance;
-  } catch (fatalDbError) {
-    console.warn(
-      "SQLite wasm initialization failed, smoothly switching to resilient JSON storage engine:",
-      fatalDbError,
-    );
-    isFallbackMode = true;
-    loadFallbackData();
-    return null;
-  }
-}
-
-export function persistDb(): void {
-  // Always persist memory fallback to JSON alongside SQLite export
-  persistFallbackData();
-
-  if (isFallbackMode || !dbInstance || !dbPath) return;
-  try {
-    const data = dbInstance.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
-  } catch (e) {
-    console.error(
-      "Error persisting SQLite database to disk at " + dbPath + ":",
-      e,
-    );
-    if (!dbPath.startsWith("/tmp")) {
-      try {
-        const fallbackPath = path.join("/tmp", "gate_prep.sqlite");
-        const data = dbInstance.export();
-        fs.writeFileSync(fallbackPath, Buffer.from(data));
-        dbPath = fallbackPath;
-        console.log(
-          "Successfully persisted database to /tmp fallback:",
-          fallbackPath,
-        );
-      } catch (err2) {
-        console.error("Fallback persistence to /tmp also failed:", err2);
-      }
-    }
-  }
-}
-
 // User helper methods
 export async function findUserByUsername(
-  username: string,
+  username: string
 ): Promise<UserRecord | null> {
   const cleanUsername = username.trim().toLowerCase();
-
-  // Check in-memory store first
-  for (const u of memoryUsers.values()) {
-    if (u.username.toLowerCase() === cleanUsername) {
-      return u;
-    }
-  }
-
-  const db = await getDb();
-  if (!db) return null;
+  await connectDb();
 
   try {
-    const stmt = db.prepare(
-      "SELECT id, username, password_hash, created_at FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1",
-    );
-    stmt.bind([cleanUsername]);
-    if (stmt.step()) {
-      const row = stmt.getAsObject() as any;
-      stmt.free();
-      const userRec: UserRecord = {
-        id: row.id,
-        username: row.username,
-        password_hash: row.password_hash,
-        created_at: row.created_at,
-      };
-      memoryUsers.set(userRec.id, userRec);
-      return userRec;
-    }
-    stmt.free();
-    return null;
+    const filter: any = { username: new RegExp(`^${cleanUsername}$`, "i") };
+    const userDoc: any = await UserModel.findOne(filter).lean();
+
+    if (!userDoc) return null;
+
+    return {
+      id: userDoc.userId,
+      username: userDoc.username,
+      password_hash: userDoc.password_hash,
+      created_at: userDoc.created_at,
+    };
   } catch (err) {
-    console.warn("SQLite query failed, falling back to memory store:", err);
-    for (const u of memoryUsers.values()) {
-      if (u.username.toLowerCase() === cleanUsername) return u;
-    }
+    console.error("Error finding user by username:", err);
     return null;
   }
 }
 
 export async function findUserById(id: string): Promise<UserRecord | null> {
-  if (memoryUsers.has(id)) {
-    return memoryUsers.get(id)!;
-  }
-
-  const db = await getDb();
-  if (!db) {
-    return null;
-  }
+  await connectDb();
 
   try {
-    const stmt = db.prepare(
-      "SELECT id, username, password_hash, created_at FROM users WHERE id = ? LIMIT 1",
-    );
-    stmt.bind([id]);
-    if (stmt.step()) {
-      const row = stmt.getAsObject() as any;
-      stmt.free();
-      const userRec: UserRecord = {
-        id: row.id,
-        username: row.username,
-        password_hash: row.password_hash,
-        created_at: row.created_at,
-      };
-      memoryUsers.set(userRec.id, userRec);
-      return userRec;
-    }
-    stmt.free();
-    return null;
+    const filter: any = { userId: id };
+    const userDoc: any = await UserModel.findOne(filter).lean();
+    if (!userDoc) return null;
+
+    return {
+      id: userDoc.userId,
+      username: userDoc.username,
+      password_hash: userDoc.password_hash,
+      created_at: userDoc.created_at,
+    };
   } catch (err) {
-    console.warn("SQLite query failed, falling back to memory store:", err);
-    return memoryUsers.get(id) || null;
+    console.error("Error finding user by ID:", err);
+    return null;
   }
 }
 
 export async function insertUser(
   id: string,
   username: string,
-  passwordHash: string,
+  passwordHash: string
 ): Promise<UserRecord> {
-  const existingUser = memoryUsers.get(id);
-  const effectiveHash =
-    passwordHash && passwordHash.length > 0
-      ? passwordHash
-      : existingUser
-        ? existingUser.password_hash
-        : "";
+  await connectDb();
 
-  const now = existingUser?.created_at || new Date().toISOString();
-  const newUser: UserRecord = {
-    id,
-    username,
-    password_hash: effectiveHash,
-    created_at: now,
-  };
+  const now = new Date().toISOString();
+  const cleanUsername = username.trim().toLowerCase();
 
-  // Always keep in-memory maps in sync
-  memoryUsers.set(id, newUser);
-  if (!memoryStudyData.has(id)) {
-    memoryStudyData.set(id, {
+  try {
+    const filter: any = { userId: id };
+    const userDoc: any = await UserModel.findOneAndUpdate(
+      filter,
+      {
+        userId: id,
+        username: cleanUsername,
+        password_hash: passwordHash,
+        created_at: now,
+      },
+      { upsert: true, new: true }
+    ).lean();
+
+    // Ensure default settings exist for user
+    await UserSettingsModel.updateOne(
+      filter,
+      {
+        $setOnInsert: {
+          userId: id,
+          revisionSettings: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
+        },
+      },
+      { upsert: true }
+    );
+
+    return {
+      id: userDoc.userId,
+      username: userDoc.username,
+      password_hash: userDoc.password_hash,
+      created_at: userDoc.created_at,
+    };
+  } catch (err) {
+    console.error("Error inserting user:", err);
+    throw err;
+  }
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  await connectDb();
+  try {
+    const filter: any = { userId: id };
+    await Promise.all([
+      UserModel.deleteOne(filter),
+      SubjectModel.deleteMany(filter),
+      ChapterModel.deleteMany(filter),
+      RevisionModel.deleteMany(filter),
+      PyqModel.deleteMany(filter),
+      PyqQueueModel.deleteMany(filter),
+      CalendarEventModel.deleteMany(filter),
+      ExamModel.deleteMany(filter),
+      UserSettingsModel.deleteOne(filter),
+    ]);
+    return true;
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    return false;
+  }
+}
+
+export async function getUserStudyData(
+  userId: string
+): Promise<StudyDataRecord> {
+  await connectDb();
+  const filter: any = { userId };
+
+  try {
+    const [
+      subjects,
+      chapters,
+      revisions,
+      pyqs,
+      pyqQueue,
+      calendarEvents,
+      exams,
+      settingsDoc,
+    ] = await Promise.all([
+      SubjectModel.find(filter).lean(),
+      ChapterModel.find(filter).lean(),
+      RevisionModel.find(filter).lean(),
+      PyqModel.find(filter).lean(),
+      PyqQueueModel.find(filter).lean(),
+      CalendarEventModel.find(filter).lean(),
+      ExamModel.find(filter).lean(),
+      UserSettingsModel.findOne(filter).lean(),
+    ]);
+
+    // Map away Mongo _id / __v metadata
+    const cleanList = (arr: any[]) =>
+      arr.map(({ _id, __v, ...rest }) => rest);
+
+    return {
+      subjects: cleanList(subjects || []),
+      chapters: cleanList(chapters || []),
+      revisions: cleanList(revisions || []),
+      pyqs: cleanList(pyqs || []),
+      pyqQueue: cleanList(pyqQueue || []),
+      calendarEvents: cleanList(calendarEvents || []),
+      exams: cleanList(exams || []),
+      revisionSettings: settingsDoc?.revisionSettings || {
+        rev1Days: 7,
+        rev2Days: 14,
+        rev3Days: 28,
+      },
+    };
+  } catch (err) {
+    console.error("Error fetching study data from normalized collections:", err);
+    return {
       subjects: [],
       chapters: [],
       revisions: [],
@@ -373,348 +451,113 @@ export async function insertUser(
       calendarEvents: [],
       exams: [],
       revisionSettings: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
-    });
+    };
   }
-
-  const db = await getDb();
-  if (!db) {
-    persistFallbackData();
-    return newUser;
-  }
-
-  try {
-    const checkUser = db.prepare(
-      "SELECT id, password_hash FROM users WHERE id = ? LIMIT 1",
-    );
-    checkUser.bind([id]);
-    const userExists = checkUser.step();
-    let dbHash = "";
-    if (userExists) {
-      const row = checkUser.getAsObject() as any;
-      dbHash = row.password_hash || "";
-    }
-    checkUser.free();
-
-    const finalHash = effectiveHash || dbHash || "";
-    if (!finalHash) {
-      throw new Error("Cannot save user without password hash.");
-    }
-
-    if (userExists) {
-      db.run("UPDATE users SET username = ?, password_hash = ? WHERE id = ?", [
-        username,
-        finalHash,
-        id,
-      ]);
-    } else {
-      db.run(
-        "INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)",
-        [id, username, finalHash, now],
-      );
-    }
-
-    // Initialize fresh study_data row if not exists
-    const checkStudy = db.prepare(
-      "SELECT user_id FROM study_data WHERE user_id = ? LIMIT 1",
-    );
-    checkStudy.bind([id]);
-    const studyExists = checkStudy.step();
-    checkStudy.free();
-
-    if (!studyExists) {
-      const defaultSettings = JSON.stringify({
-        rev1Days: 7,
-        rev2Days: 14,
-        rev3Days: 28,
-      });
-      db.run(
-        `INSERT INTO study_data (
-          user_id, subjects_json, chapters_json, revisions_json, pyqs_json, 
-          pyq_queue_json, calendar_json, exams_json, settings_json, updated_at
-        ) VALUES (?, '[]', '[]', '[]', '[]', '[]', '[]', '[]', ?, ?)`,
-        [id, defaultSettings, now],
-      );
-    }
-
-    persistDb();
-  } catch (err) {
-    console.warn("SQLite insert failed, persisting to memory fallback:", err);
-    persistFallbackData();
-  }
-
-  return newUser;
 }
 
-export async function deleteUser(id: string): Promise<boolean> {
-  memoryUsers.delete(id);
-  memoryStudyData.delete(id);
-
-  const db = await getDb();
-  if (db) {
-    try {
-      db.run("DELETE FROM study_data WHERE user_id = ?", [id]);
-      db.run("DELETE FROM users WHERE id = ?", [id]);
-      persistDb();
-      return true;
-    } catch (err) {
-      console.warn("SQLite delete user failed:", err);
-    }
-  }
-
-  persistFallbackData();
-  return true;
-}
-
-export async function getUserStudyData(
+// Bulk sync helper for normalized MongoDB collections
+async function syncCollection(
+  Model: any,
   userId: string,
-): Promise<StudyDataRecord> {
-  const memoryRecord = memoryStudyData.get(userId);
-  const db = await getDb();
-  if (!db) {
-    return (
-      memoryRecord || {
-        subjects: [],
-        chapters: [],
-        revisions: [],
-        pyqs: [],
-        pyqQueue: [],
-        calendarEvents: [],
-        exams: [],
-        revisionSettings: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
-      }
-    );
+  items: any[] = []
+): Promise<void> {
+  const filter: any = { userId };
+  if (!items || items.length === 0) {
+    await Model.deleteMany(filter);
+    return;
   }
 
-  try {
-    const stmt = db.prepare(`
-      SELECT subjects_json, chapters_json, revisions_json, pyqs_json,
-             pyq_queue_json, calendar_json, exams_json, settings_json
-      FROM study_data WHERE user_id = ? LIMIT 1
-    `);
-    stmt.bind([userId]);
+  const bulkOps = items.map((item) => {
+    const cleanItem = { ...item, userId };
+    delete cleanItem._id;
+    delete cleanItem.__v;
+    return {
+      updateOne: {
+        filter: { userId, id: item.id },
+        update: { $set: cleanItem },
+        upsert: true,
+      },
+    };
+  });
 
-    if (stmt.step()) {
-      const row = stmt.getAsObject() as any;
-      stmt.free();
-      try {
-        const record: StudyDataRecord = {
-          subjects: JSON.parse(row.subjects_json || "[]"),
-          chapters: JSON.parse(row.chapters_json || "[]"),
-          revisions: JSON.parse(row.revisions_json || "[]"),
-          pyqs: JSON.parse(row.pyqs_json || "[]"),
-          pyqQueue: JSON.parse(row.pyq_queue_json || "[]"),
-          calendarEvents: JSON.parse(row.calendar_json || "[]"),
-          exams: JSON.parse(row.exams_json || "[]"),
-          revisionSettings: JSON.parse(
-            row.settings_json || '{"rev1Days":7,"rev2Days":14,"rev3Days":28}',
-          ),
-        };
-        memoryStudyData.set(userId, record);
-        return record;
-      } catch (e) {
-        console.error("Error parsing study data JSON:", e);
-      }
-    } else {
-      stmt.free();
-    }
-  } catch (err) {
-    console.warn("SQLite select study data failed, checking memory:", err);
+  // Remove items deleted on frontend
+  const keepIds = items.map((i) => i.id);
+  await Model.deleteMany({ userId, id: { $nin: keepIds } });
+  if (bulkOps.length > 0) {
+    await Model.bulkWrite(bulkOps);
   }
-
-  if (memoryRecord) {
-    return memoryRecord;
-  }
-
-  // Fresh empty state if record doesn't exist anywhere
-  return {
-    subjects: [],
-    chapters: [],
-    revisions: [],
-    pyqs: [],
-    pyqQueue: [],
-    calendarEvents: [],
-    exams: [],
-    revisionSettings: { rev1Days: 7, rev2Days: 14, rev3Days: 28 },
-  };
 }
 
 export async function saveUserStudyData(
   userId: string,
-  data: Partial<StudyDataRecord>,
+  data: Partial<StudyDataRecord>
 ): Promise<void> {
-  const db = await getDb();
-  const now = new Date().toISOString();
+  await connectDb();
   const safeData = data && typeof data === "object" ? data : {};
 
-  // Retrieve existing record first to merge partial update cleanly
-  const existing = await getUserStudyData(userId);
-
-  const updatedData: StudyDataRecord = {
-    subjects: Array.isArray(safeData.subjects)
-      ? safeData.subjects
-      : existing.subjects || [],
-    chapters: Array.isArray(safeData.chapters)
-      ? safeData.chapters
-      : existing.chapters || [],
-    revisions: Array.isArray(safeData.revisions)
-      ? safeData.revisions
-      : existing.revisions || [],
-    pyqs: Array.isArray(safeData.pyqs) ? safeData.pyqs : existing.pyqs || [],
-    pyqQueue: Array.isArray(safeData.pyqQueue)
-      ? safeData.pyqQueue
-      : existing.pyqQueue || [],
-    calendarEvents: Array.isArray(safeData.calendarEvents)
-      ? safeData.calendarEvents
-      : existing.calendarEvents || [],
-    exams: Array.isArray(safeData.exams)
-      ? safeData.exams
-      : existing.exams || [],
-    revisionSettings:
-      safeData.revisionSettings && typeof safeData.revisionSettings === "object"
-        ? safeData.revisionSettings
-        : existing.revisionSettings || {
-            rev1Days: 7,
-            rev2Days: 14,
-            rev3Days: 28,
-          },
-  };
-
-  memoryStudyData.set(userId, updatedData);
-
-  if (!db) {
-    persistFallbackData();
-    return;
-  }
-
   try {
-    const subjectsJson = JSON.stringify(updatedData.subjects);
-    const chaptersJson = JSON.stringify(updatedData.chapters);
-    const revisionsJson = JSON.stringify(updatedData.revisions);
-    const pyqsJson = JSON.stringify(updatedData.pyqs);
-    const pyqQueueJson = JSON.stringify(updatedData.pyqQueue);
-    const calendarJson = JSON.stringify(updatedData.calendarEvents);
-    const examsJson = JSON.stringify(updatedData.exams);
-    const settingsJson = JSON.stringify(updatedData.revisionSettings);
+    const tasks: Promise<any>[] = [];
 
-    const checkStmt = db.prepare(
-      "SELECT user_id FROM study_data WHERE user_id = ? LIMIT 1",
-    );
-    checkStmt.bind([userId]);
-    const exists = checkStmt.step();
-    checkStmt.free();
-
-    if (exists) {
-      db.run(
-        `UPDATE study_data SET
-          subjects_json = ?,
-          chapters_json = ?,
-          revisions_json = ?,
-          pyqs_json = ?,
-          pyq_queue_json = ?,
-          calendar_json = ?,
-          exams_json = ?,
-          settings_json = ?,
-          updated_at = ?
-         WHERE user_id = ?`,
-        [
-          subjectsJson,
-          chaptersJson,
-          revisionsJson,
-          pyqsJson,
-          pyqQueueJson,
-          calendarJson,
-          examsJson,
-          settingsJson,
-          now,
-          userId,
-        ],
-      );
-    } else {
-      db.run(
-        `INSERT INTO study_data (
-          user_id, subjects_json, chapters_json, revisions_json, pyqs_json, 
-          pyq_queue_json, calendar_json, exams_json, settings_json, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          userId,
-          subjectsJson,
-          chaptersJson,
-          revisionsJson,
-          pyqsJson,
-          pyqQueueJson,
-          calendarJson,
-          examsJson,
-          settingsJson,
-          now,
-        ],
+    if (Array.isArray(safeData.subjects)) {
+      tasks.push(syncCollection(SubjectModel, userId, safeData.subjects));
+    }
+    if (Array.isArray(safeData.chapters)) {
+      tasks.push(syncCollection(ChapterModel, userId, safeData.chapters));
+    }
+    if (Array.isArray(safeData.revisions)) {
+      tasks.push(syncCollection(RevisionModel, userId, safeData.revisions));
+    }
+    if (Array.isArray(safeData.pyqs)) {
+      tasks.push(syncCollection(PyqModel, userId, safeData.pyqs));
+    }
+    if (Array.isArray(safeData.pyqQueue)) {
+      tasks.push(syncCollection(PyqQueueModel, userId, safeData.pyqQueue));
+    }
+    if (Array.isArray(safeData.calendarEvents)) {
+      tasks.push(syncCollection(CalendarEventModel, userId, safeData.calendarEvents));
+    }
+    if (Array.isArray(safeData.exams)) {
+      tasks.push(syncCollection(ExamModel, userId, safeData.exams));
+    }
+    if (safeData.revisionSettings && typeof safeData.revisionSettings === "object") {
+      tasks.push(
+        UserSettingsModel.updateOne(
+          { userId },
+          { $set: { userId, revisionSettings: safeData.revisionSettings } },
+          { upsert: true }
+        )
       );
     }
 
-    persistDb();
+    await Promise.all(tasks);
   } catch (err) {
-    console.warn("SQLite save failed, falling back to memory/json store:", err);
-    persistFallbackData();
+    console.error("Error saving user study data to normalized MongoDB collections:", err);
+    throw err;
   }
 }
 
 export async function resetUserStudyData(userId: string): Promise<void> {
-  const now = new Date().toISOString();
+  await connectDb();
+  const filter: any = { userId };
   const defaultSettings = { rev1Days: 7, rev2Days: 14, rev3Days: 28 };
 
-  memoryStudyData.set(userId, {
-    subjects: [],
-    chapters: [],
-    revisions: [],
-    pyqs: [],
-    pyqQueue: [],
-    calendarEvents: [],
-    exams: [],
-    revisionSettings: defaultSettings,
-  });
-
-  const db = await getDb();
-  if (!db) {
-    persistFallbackData();
-    return;
-  }
-
   try {
-    const check = db.prepare(
-      "SELECT user_id FROM study_data WHERE user_id = ? LIMIT 1",
-    );
-    check.bind([userId]);
-    const exists = check.step();
-    check.free();
-
-    const settingsJson = JSON.stringify(defaultSettings);
-    if (exists) {
-      db.run(
-        `UPDATE study_data SET
-          subjects_json = '[]',
-          chapters_json = '[]',
-          revisions_json = '[]',
-          pyqs_json = '[]',
-          pyq_queue_json = '[]',
-          calendar_json = '[]',
-          exams_json = '[]',
-          settings_json = ?,
-          updated_at = ?
-         WHERE user_id = ?`,
-        [settingsJson, now, userId],
-      );
-    } else {
-      db.run(
-        `INSERT INTO study_data (
-          user_id, subjects_json, chapters_json, revisions_json, pyqs_json,
-          pyq_queue_json, calendar_json, exams_json, settings_json, updated_at
-        ) VALUES (?, '[]', '[]', '[]', '[]', '[]', '[]', '[]', ?, ?)`,
-        [userId, settingsJson, now],
-      );
-    }
-
-    persistDb();
+    await Promise.all([
+      SubjectModel.deleteMany(filter),
+      ChapterModel.deleteMany(filter),
+      RevisionModel.deleteMany(filter),
+      PyqModel.deleteMany(filter),
+      PyqQueueModel.deleteMany(filter),
+      CalendarEventModel.deleteMany(filter),
+      ExamModel.deleteMany(filter),
+      UserSettingsModel.updateOne(
+        filter,
+        { $set: { userId, revisionSettings: defaultSettings } },
+        { upsert: true }
+      ),
+    ]);
   } catch (err) {
-    console.warn("SQLite reset failed, saved to fallback store:", err);
-    persistFallbackData();
+    console.error("Error resetting user study data in MongoDB:", err);
+    throw err;
   }
 }
