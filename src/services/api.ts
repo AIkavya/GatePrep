@@ -136,10 +136,43 @@ export const api = {
     },
 
     saveData: async (data: any): Promise<{ success: boolean; message: string }> => {
-      return request<{ success: boolean; message: string }>('/api/gate/data', {
+      const jsonString = JSON.stringify(data);
+      // Safe threshold (2 MB) to stay far below Vercel's 4.5 MB serverless limit
+      if (jsonString.length <= 2 * 1024 * 1024 || !Array.isArray(data?.pyqs)) {
+        return request<{ success: boolean; message: string }>('/api/gate/data', {
+          method: 'PUT',
+          body: jsonString,
+        });
+      }
+
+      // Payload is large (likely contains uncompressed/legacy Base64 images or many PYQs)
+      // Chunk pyqs array into smaller batches
+      const pyqs: any[] = data.pyqs || [];
+      const allPyqIds = pyqs.map((p) => p.id);
+      const chunkSize = 15;
+
+      // First sync metadata and other collections (excluding pyqs)
+      const { pyqs: _, ...metadata } = data;
+      await request<{ success: boolean; message: string }>('/api/gate/data', {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...metadata, isPartial: true }),
       });
+
+      // Sync pyqs in chunks
+      for (let i = 0; i < pyqs.length; i += chunkSize) {
+        const pyqChunk = pyqs.slice(i, i + chunkSize);
+        const isLastChunk = i + chunkSize >= pyqs.length;
+        await request<{ success: boolean; message: string }>('/api/gate/data', {
+          method: 'PUT',
+          body: JSON.stringify({
+            pyqs: pyqChunk,
+            isPartial: true,
+            allPyqIds: isLastChunk ? allPyqIds : undefined,
+          }),
+        });
+      }
+
+      return { success: true, message: 'Data saved successfully in safe payload chunks' };
     },
 
     resetData: async (): Promise<any> => {

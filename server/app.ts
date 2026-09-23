@@ -91,7 +91,8 @@ apiRouter.put('/gate/data', authMiddleware, async (req: AuthRequest, res: Respon
   try {
     const userId = req.userId!;
     const payload = req.body;
-    await saveUserStudyData(userId, payload);
+    const isPartialChunk = Boolean(req.query.isPartial === 'true' || payload.isPartial === true);
+    await saveUserStudyData(userId, payload, isPartialChunk);
     res.json({ success: true, message: 'Data saved successfully to database' });
   } catch (error: any) {
     console.error('Error saving user study data:', error);

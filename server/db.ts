@@ -459,11 +459,15 @@ export async function getUserStudyData(
 async function syncCollection(
   Model: any,
   userId: string,
-  items: any[] = []
+  items: any[] = [],
+  isPartialChunk = false,
+  allKeepIds?: string[]
 ): Promise<void> {
   const filter: any = { userId };
   if (!items || items.length === 0) {
-    await Model.deleteMany(filter);
+    if (!isPartialChunk && !allKeepIds) {
+      await Model.deleteMany(filter);
+    }
     return;
   }
 
@@ -480,9 +484,11 @@ async function syncCollection(
     };
   });
 
-  // Remove items deleted on frontend
-  const keepIds = items.map((i) => i.id);
-  await Model.deleteMany({ userId, id: { $nin: keepIds } });
+  // Remove items deleted on frontend if this is a full sync or explicit allKeepIds was provided
+  const keepIds = allKeepIds || items.map((i) => i.id);
+  if (!isPartialChunk || allKeepIds) {
+    await Model.deleteMany({ userId, id: { $nin: keepIds } });
+  }
   if (bulkOps.length > 0) {
     await Model.bulkWrite(bulkOps);
   }
@@ -490,34 +496,36 @@ async function syncCollection(
 
 export async function saveUserStudyData(
   userId: string,
-  data: Partial<StudyDataRecord>
+  data: Partial<StudyDataRecord> & { isPartial?: boolean; allPyqIds?: string[] },
+  isPartialChunkOverride = false
 ): Promise<void> {
   await connectDb();
   const safeData = data && typeof data === "object" ? data : {};
+  const isPartial = isPartialChunkOverride || Boolean(safeData.isPartial);
 
   try {
     const tasks: Promise<any>[] = [];
 
     if (Array.isArray(safeData.subjects)) {
-      tasks.push(syncCollection(SubjectModel, userId, safeData.subjects));
+      tasks.push(syncCollection(SubjectModel, userId, safeData.subjects, isPartial));
     }
     if (Array.isArray(safeData.chapters)) {
-      tasks.push(syncCollection(ChapterModel, userId, safeData.chapters));
+      tasks.push(syncCollection(ChapterModel, userId, safeData.chapters, isPartial));
     }
     if (Array.isArray(safeData.revisions)) {
-      tasks.push(syncCollection(RevisionModel, userId, safeData.revisions));
+      tasks.push(syncCollection(RevisionModel, userId, safeData.revisions, isPartial));
     }
     if (Array.isArray(safeData.pyqs)) {
-      tasks.push(syncCollection(PyqModel, userId, safeData.pyqs));
+      tasks.push(syncCollection(PyqModel, userId, safeData.pyqs, isPartial, safeData.allPyqIds));
     }
     if (Array.isArray(safeData.pyqQueue)) {
-      tasks.push(syncCollection(PyqQueueModel, userId, safeData.pyqQueue));
+      tasks.push(syncCollection(PyqQueueModel, userId, safeData.pyqQueue, isPartial));
     }
     if (Array.isArray(safeData.calendarEvents)) {
-      tasks.push(syncCollection(CalendarEventModel, userId, safeData.calendarEvents));
+      tasks.push(syncCollection(CalendarEventModel, userId, safeData.calendarEvents, isPartial));
     }
     if (Array.isArray(safeData.exams)) {
-      tasks.push(syncCollection(ExamModel, userId, safeData.exams));
+      tasks.push(syncCollection(ExamModel, userId, safeData.exams, isPartial));
     }
     if (safeData.revisionSettings && typeof safeData.revisionSettings === "object") {
       tasks.push(

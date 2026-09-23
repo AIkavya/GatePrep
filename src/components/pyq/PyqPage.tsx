@@ -33,6 +33,7 @@ import {
   QuestionTypeBadge,
 } from "../common/Badge";
 import { Modal } from "../common/Modal";
+import { compressImageFile } from "../../utils/imageCompressor";
 import { PyqQueueView } from "./PyqQueueView";
 
 export const PyqPage: React.FC = () => {
@@ -199,25 +200,32 @@ export const PyqPage: React.FC = () => {
   };
 
   // Photo upload and attachment handlers
-  const handlePhotoUpload = (file?: File | null) => {
+  const handlePhotoUpload = async (file?: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       alert("Please select a valid image file (PNG, JPG, WebP, SVG, etc.).");
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      alert("Image file size is too large. Please select an image under 8MB.");
+    if (file.size > 15 * 1024 * 1024) {
+      alert("Image file size is too large. Please select an image under 15MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (result) {
-        setFormImageUrl(result);
-        setShowUrlInput(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedDataUrl = await compressImageFile(file);
+      setFormImageUrl(compressedDataUrl);
+      setShowUrlInput(false);
+    } catch (e) {
+      console.error("Failed to compress image, falling back to raw reader:", e);
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const result = evt.target?.result as string;
+        if (result) {
+          setFormImageUrl(result);
+          setShowUrlInput(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleApplyUrl = () => {
