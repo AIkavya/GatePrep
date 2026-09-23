@@ -260,7 +260,11 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({
             if (remoteData.revisionSettings) {
               setRevisionSettings(remoteData.revisionSettings);
             }
-            localStorage.setItem(userCacheKey, JSON.stringify(remoteData));
+            try {
+              localStorage.setItem(userCacheKey, JSON.stringify(remoteData));
+            } catch (e) {
+              console.warn("localStorage quota exceeded while caching study data:", e);
+            }
             setSyncStatus("synced");
           }
         } catch (fetchErr) {
@@ -355,9 +359,13 @@ export const GateProvider: React.FC<{ children: React.ReactNode }> = ({
       revisionSettings,
     };
 
-    // Save locally
+    // Save locally (fallback/cache)
     const userCacheKey = `gate_prep_user_data_${user.id}`;
-    localStorage.setItem(userCacheKey, JSON.stringify(dataToSave));
+    try {
+      localStorage.setItem(userCacheKey, JSON.stringify(dataToSave));
+    } catch (e) {
+      console.warn("localStorage quota exceeded while saving study data:", e);
+    }
 
     // Debounced sync to SQLite backend
     setSyncStatus("saving");
