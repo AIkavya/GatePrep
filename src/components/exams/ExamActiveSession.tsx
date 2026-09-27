@@ -434,7 +434,7 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
             {/* Interactive Answering Form */}
             <div className="pt-2">
               {/* Type A: MCQ (Single Choice Radio Cards) */}
-              {qType === "mcq" && (
+              {qType === "mcq" && !currentQuestion?.isNat && !currentQuestion?.isNumerical && (
                 <div className="space-y-2.5">
                   {(
                     currentQuestion.options || [
@@ -479,7 +479,7 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
               )}
 
               {/* Type B: MSQ (Multiple Select Checkbox Cards) */}
-              {qType === "msq" && (
+              {qType === "msq" && !currentQuestion?.isNat && !currentQuestion?.isNumerical && (
                 <div className="space-y-3">
                   <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
                     <span className="font-bold uppercase tracking-wider text-[10px] px-1.5 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 rounded">
@@ -540,7 +540,7 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
               )}
 
               {/* Type C: NAT (Numerical Answer Type Input + Official GATE Virtual Dialer) */}
-              {qType === "nat" && (
+              {(qType === "nat" || currentQuestion?.isNat || currentQuestion?.isNumerical) && (
                 <div className="space-y-4 max-w-md">
                   <div className="p-3 bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 rounded-xl text-xs text-purple-900 dark:text-purple-200 flex items-center gap-2">
                     <Hash className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />

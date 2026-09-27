@@ -12,15 +12,16 @@ import {
  * Determine question type reliably across question records
  */
 export function getQuestionType(q: PYQ): QuestionType {
-  if (q.questionType) return q.questionType;
   if (
     q.isNat ||
     q.isNumerical ||
     q.natAnswerRange ||
-    q.numericalAnswer !== undefined
+    q.numericalAnswer !== undefined ||
+    q.questionType === "nat"
   ) {
     return "nat";
   }
+  if (q.questionType) return q.questionType;
   if (Array.isArray(q.correctOptions) && q.correctOptions.length > 1) {
     return "msq";
   }
