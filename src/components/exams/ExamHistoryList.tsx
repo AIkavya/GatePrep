@@ -194,7 +194,7 @@ export const ExamHistoryList: React.FC<ExamHistoryListProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {onRetakeExam && report?.questions && report.questions.length > 0 && (
+                    {onRetakeExam && (
                       <button
                         type="button"
                         onClick={() => onRetakeExam(exam)}

@@ -532,48 +532,72 @@ export const ExamsPage: React.FC = () => {
   };
 
   const handleRetakeExamFromHistory = (exam: Exam) => {
-    if (!exam.reportData || !exam.reportData.questions || exam.reportData.questions.length === 0) {
-      alert("This exam session does not contain detailed question data to retake.");
-      return;
+    let exactQuestions: PYQ[] = [];
+    const report = exam.reportData;
+
+    if (report && report.questions && report.questions.length > 0) {
+      // Reconstruct PYQs from exam report questions
+      exactQuestions = report.questions.map((q, idx) => {
+        const originalPyq = pyqs.find((p) => p.id === q.questionId);
+        if (originalPyq) return originalPyq;
+
+        return {
+          id: q.questionId || `retake-q-${idx}`,
+          subjectId: q.subjectId,
+          chapterId: q.chapterId,
+          year: 2024,
+          questionNumber: q.questionNumber ? String(q.questionNumber) : `Q.${idx + 1}`,
+          questionText: q.questionText,
+          imageUrl: q.imageUrl,
+          marks: q.maxMarks === 2 ? 2 : 1,
+          questionType: q.questionType,
+          isNat: q.questionType === "nat",
+          natAnswerRange: q.natAnswerRange,
+          options: q.options || [],
+          answer: String(q.correctAnswer || ""),
+          explanation: q.explanation,
+          difficulty: "medium",
+          status: "unsolved",
+        } as PYQ;
+      });
+    } else {
+      // Dynamic fallback pool build for legacy / manually logged test records
+      const syllabusScope = exam.syllabusScope || (exam.subjectId ? "single_subject" : "all");
+      const subIds = exam.subjectIds || (exam.subjectId ? [exam.subjectId] : []);
+      const chapIds = exam.chapterIds || (exam.chapterId ? [exam.chapterId] : []);
+      const qTypes = exam.questionTypes || ["mcq", "msq", "nat"];
+      const reqCount = exam.totalQuestions || 15;
+
+      const eligiblePool = buildQuestionPool({
+        pyqs,
+        scope: syllabusScope as any,
+        selectedSubjectIds: subIds,
+        selectedChapterIds: chapIds,
+        selectedQuestionTypes: qTypes,
+      });
+
+      exactQuestions = selectExamQuestions({
+        eligiblePool,
+        requestedCount: reqCount,
+        selectedQuestionTypes: qTypes,
+      });
     }
 
-    const report = exam.reportData;
-    // Map ExamQuestionResult back to PYQ format for the session
-    const exactQuestions: PYQ[] = report.questions.map((q, idx) => {
-      // Find original PYQ if exists to preserve image/full object, or reconstruct PYQ
-      const originalPyq = pyqs.find((p) => p.id === q.questionId);
-      if (originalPyq) return originalPyq;
-
-      return {
-        id: q.questionId || `retake-q-${idx}`,
-        subjectId: q.subjectId,
-        chapterId: q.chapterId,
-        year: 2024,
-        questionNumber: q.questionNumber ? String(q.questionNumber) : `Q.${idx + 1}`,
-        questionText: q.questionText,
-        imageUrl: q.imageUrl,
-        marks: q.maxMarks === 2 ? 2 : 1,
-        questionType: q.questionType,
-        isNat: q.questionType === "nat",
-        natAnswerRange: q.natAnswerRange,
-        options: q.options || [],
-        answer: String(q.correctAnswer || ""),
-        explanation: q.explanation,
-        difficulty: "medium",
-        status: "unsolved",
-      } as PYQ;
-    });
+    if (exactQuestions.length === 0) {
+      alert("No questions could be assembled for this retake.");
+      return;
+    }
 
     const sessionData: ActiveExamSessionData = {
       examId: "exam-retake-" + Date.now(),
       title: `Retake: ${exam.title}`,
-      syllabusScope: report.syllabusScope || "all",
+      syllabusScope: report?.syllabusScope || exam.syllabusScope || "all",
       selectedSubjectIds: exam.subjectIds || (exam.subjectId ? [exam.subjectId] : []),
       selectedChapterIds: exam.chapterIds || (exam.chapterId ? [exam.chapterId] : []),
-      selectedQuestionTypes: report.questionTypes || ["mcq", "msq", "nat"],
+      selectedQuestionTypes: report?.questionTypes || exam.questionTypes || ["mcq", "msq", "nat"],
       questions: exactQuestions,
-      durationMinutes: report.durationMinutes || exam.durationMinutes || 60,
-      durationSeconds: (report.durationMinutes || exam.durationMinutes || 60) * 60,
+      durationMinutes: report?.durationMinutes || exam.durationMinutes || 60,
+      durationSeconds: (report?.durationMinutes || exam.durationMinutes || 60) * 60,
       startedAt: Date.now(),
       userAnswers: {},
       questionTimes: {},
