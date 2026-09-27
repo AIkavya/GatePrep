@@ -539,77 +539,79 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
                 </div>
               )}
 
-              {/* Type C: NAT (Numerical Answer Type Input + Keypad) */}
+              {/* Type C: NAT (Numerical Answer Type Input + Official GATE Virtual Dialer) */}
               {qType === "nat" && (
                 <div className="space-y-4 max-w-md">
+                  <div className="p-3 bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 rounded-xl text-xs text-purple-900 dark:text-purple-200 flex items-center gap-2">
+                    <Hash className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                    <span>
+                      <strong className="font-bold">NAT Question:</strong> Use the GATE Virtual Dialer below or your keyboard to enter your answer.
+                    </span>
+                  </div>
+
                   <div>
-                    <label className="block text-xs font-semibold text-[#86868b] dark:text-[#a1a1a6] uppercase tracking-wider mb-2">
-                      Enter Numerical Answer
+                    <label className="block text-xs font-bold text-[#86868b] dark:text-[#a1a1a6] uppercase tracking-wider mb-2">
+                      Entered Numerical Answer
                     </label>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
-                        placeholder="e.g. 4.67 or 1280"
+                        placeholder="e.g. 4.67 or -128"
                         value={userAnswers[currentQuestion.id] || ""}
                         onChange={(e) => handleNatChange(e.target.value)}
-                        className="w-full px-4 py-3 text-lg font-mono font-bold rounded-xl border border-[#e5e5ea] dark:border-[#38383a] bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full px-4 py-3 text-xl font-mono font-black rounded-xl border border-[#e5e5ea] dark:border-[#38383a] bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
                       />
                       <button
                         type="button"
                         onClick={handleClearResponse}
-                        className="px-3 py-3 rounded-xl border border-[#e5e5ea] dark:border-[#38383a] text-xs font-semibold text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] hover:bg-gray-100 dark:hover:bg-[#38383a]"
+                        className="px-4 py-3 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
                       >
                         Clear
                       </button>
                     </div>
                   </div>
 
-                  {/* Virtual Numeric Keypad for Competitive Exam feel */}
-                  <div className="p-3 bg-[#f5f5f7] dark:bg-[#252528] rounded-xl border border-[#e5e5ea] dark:border-[#38383a] space-y-2">
-                    <div className="text-[11px] font-semibold text-[#86868b] uppercase tracking-wider flex items-center justify-between">
-                      <span>Virtual Keypad</span>
-                      <span className="lowercase">typing also enabled</span>
+                  {/* Virtual Numeric Dialer */}
+                  <div className="p-4 bg-[#f5f5f7] dark:bg-[#252528] rounded-2xl border border-[#e5e5ea] dark:border-[#38383a] space-y-3 shadow-2xs">
+                    <div className="text-[11px] font-bold text-[#86868b] dark:text-[#a1a1a6] uppercase tracking-wider flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Hash className="w-3.5 h-3.5" /> GATE Virtual Keypad / Dialer
+                      </span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
                     </div>
 
                     <div className="grid grid-cols-4 gap-2">
                       {[
-                        "7",
-                        "8",
-                        "9",
-                        "BACK",
-                        "4",
-                        "5",
-                        "6",
-                        "-",
-                        "1",
-                        "2",
-                        "3",
-                        ".",
-                        "0",
-                        "CLEAR",
-                      ].map((key) => {
-                        const isSpecial = ["BACK", "CLEAR", "-", "."].includes(
-                          key,
-                        );
-                        const isColSpan =
-                          key === "0"
-                            ? "col-span-2"
-                            : key === "CLEAR"
-                              ? "col-span-2"
-                              : "";
+                        { key: "7", label: "7" },
+                        { key: "8", label: "8" },
+                        { key: "9", label: "9" },
+                        { key: "BACK", label: "Backspace ⌫" },
+                        { key: "4", label: "4" },
+                        { key: "5", label: "5" },
+                        { key: "6", label: "6" },
+                        { key: "-", label: "+/- Sign" },
+                        { key: "1", label: "1" },
+                        { key: "2", label: "2" },
+                        { key: "3", label: "3" },
+                        { key: ".", label: "Decimal ." },
+                        { key: "0", label: "0" },
+                        { key: "CLEAR", label: "Clear All" },
+                      ].map(({ key, label }) => {
+                        const isSpecial = ["BACK", "CLEAR", "-", "."].includes(key);
+                        const isColSpan = key === "0" || key === "CLEAR" ? "col-span-2" : "";
 
                         return (
                           <button
                             key={key}
                             type="button"
                             onClick={() => handleKeypadPress(key)}
-                            className={`${isColSpan} py-2.5 rounded-lg border font-mono font-bold text-sm transition-all active:scale-95 ${
+                            className={`${isColSpan} py-3 rounded-xl border font-mono font-extrabold text-base transition-all active:scale-95 shadow-2xs flex items-center justify-center ${
                               isSpecial
-                                ? "bg-gray-200 dark:bg-[#38383a] border-gray-300 dark:border-gray-600 text-[#1d1d1f] dark:text-[#f5f5f7]"
-                                : "bg-white dark:bg-[#1c1c1e] border-[#e5e5ea] dark:border-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-gray-50 dark:hover:bg-[#2c2c2e]"
+                                ? "bg-[#e5e5ea] dark:bg-[#38383a] border-gray-300 dark:border-gray-600 text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-gray-300 dark:hover:bg-[#48484a]"
+                                : "bg-white dark:bg-[#1c1c1e] border-[#e5e5ea] dark:border-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:border-blue-300"
                             }`}
                           >
-                            {key === "BACK" ? "⌫" : key}
+                            {key === "BACK" ? "⌫" : key === "CLEAR" ? "Clear" : key}
                           </button>
                         );
                       })}
