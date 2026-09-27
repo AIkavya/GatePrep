@@ -531,6 +531,69 @@ export const ExamsPage: React.FC = () => {
     setActiveView("active_exam");
   };
 
+  const handleRetakeExamFromHistory = (exam: Exam) => {
+    if (!exam.reportData || !exam.reportData.questions || exam.reportData.questions.length === 0) {
+      alert("This exam session does not contain detailed question data to retake.");
+      return;
+    }
+
+    const report = exam.reportData;
+    // Map ExamQuestionResult back to PYQ format for the session
+    const exactQuestions: PYQ[] = report.questions.map((q, idx) => {
+      // Find original PYQ if exists to preserve image/full object, or reconstruct PYQ
+      const originalPyq = pyqs.find((p) => p.id === q.questionId);
+      if (originalPyq) return originalPyq;
+
+      return {
+        id: q.questionId || `retake-q-${idx}`,
+        subjectId: q.subjectId,
+        chapterId: q.chapterId,
+        year: 2024,
+        questionNumber: q.questionNumber ? String(q.questionNumber) : `Q.${idx + 1}`,
+        questionText: q.questionText,
+        imageUrl: q.imageUrl,
+        marks: q.maxMarks === 2 ? 2 : 1,
+        questionType: q.questionType,
+        isNat: q.questionType === "nat",
+        natAnswerRange: q.natAnswerRange,
+        options: q.options || [],
+        answer: String(q.correctAnswer || ""),
+        explanation: q.explanation,
+        difficulty: "medium",
+        status: "unsolved",
+      } as PYQ;
+    });
+
+    const sessionData: ActiveExamSessionData = {
+      examId: "exam-retake-" + Date.now(),
+      title: `Retake: ${exam.title}`,
+      syllabusScope: report.syllabusScope || "all",
+      selectedSubjectIds: exam.subjectIds || (exam.subjectId ? [exam.subjectId] : []),
+      selectedChapterIds: exam.chapterIds || (exam.chapterId ? [exam.chapterId] : []),
+      selectedQuestionTypes: report.questionTypes || ["mcq", "msq", "nat"],
+      questions: exactQuestions,
+      durationMinutes: report.durationMinutes || exam.durationMinutes || 60,
+      durationSeconds: (report.durationMinutes || exam.durationMinutes || 60) * 60,
+      startedAt: Date.now(),
+      userAnswers: {},
+      questionTimes: {},
+      markedForReview: {},
+      currentQuestionIndex: 0,
+    };
+
+    try {
+      localStorage.setItem(
+        ACTIVE_EXAM_STORAGE_KEY,
+        JSON.stringify(sessionData),
+      );
+    } catch (e) {
+      console.warn("Could not persist retake exam session:", e);
+    }
+
+    setActiveExamSession(sessionData);
+    setActiveView("active_exam");
+  };
+
   const handleUpdateActiveSession = (
     updates: Partial<ActiveExamSessionData>,
   ) => {
@@ -1016,6 +1079,7 @@ export const ExamsPage: React.FC = () => {
             }}
             onTakeNewExam={() => setActiveView("configurator")}
             onDeleteExam={deleteExam}
+            onRetakeExam={handleRetakeExamFromHistory}
           />
         </div>
       )}

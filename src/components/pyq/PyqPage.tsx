@@ -62,6 +62,8 @@ export const PyqPage: React.FC = () => {
 
   // Revealed explanations map
   const [revealedIds, setRevealedIds] = useState<Record<string, boolean>>({});
+  // User NAT Answers map for interactive keypad in PYQ list
+  const [userNatAnswers, setUserNatAnswers] = useState<Record<string, string>>({});
 
   // Modal for Add / Edit
   const [isPyqModalOpen, setIsPyqModalOpen] = useState(false);
@@ -819,15 +821,82 @@ export const PyqPage: React.FC = () => {
 
                       {/* NAT Indicator / Answer Range on Card (when not revealed or revealed) */}
                       {p.isNat && (
-                        <div className="pt-1">
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-900/40 text-xs text-purple-900 dark:text-purple-200">
+                        <div className="pt-2 space-y-3 max-w-md">
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-900/40 text-xs text-purple-900 dark:text-purple-200">
                             <span className="font-bold inline-flex items-center gap-1 text-purple-700 dark:text-purple-300">
-                              <Hash className="w-3.5 h-3.5" /> Numerical Answer
-                              Question
+                              <Hash className="w-3.5 h-3.5" /> Numerical Answer Question
                             </span>
                             <span className="text-[#86868b] dark:text-[#a1a1a6] text-[11px]">
-                              (Type in answer in GATE virtual keypad)
+                              (Use Virtual Dial Pad below or keyboard)
                             </span>
+                          </div>
+
+                          {/* Interactive Dial pad for practice when not showing answer key or as quick tester */}
+                          <div className="p-3 bg-[#f5f5f7] dark:bg-[#252528] rounded-xl border border-[#e5e5ea] dark:border-[#38383a] space-y-2">
+                            <div className="text-[11px] font-semibold text-[#86868b] dark:text-[#a1a1a6] uppercase tracking-wider flex items-center justify-between">
+                              <span>GATE Virtual Keypad</span>
+                              <span className="lowercase text-[10px]">NAT Dial Pad</span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {[
+                                "7", "8", "9", "BACK",
+                                "4", "5", "6", "-",
+                                "1", "2", "3", ".",
+                                "0", "CLEAR",
+                              ].map((key) => {
+                                const isSpecial = ["BACK", "CLEAR", "-", "."].includes(key);
+                                const isColSpan = key === "0" || key === "CLEAR" ? "col-span-2" : "";
+                                return (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => {
+                                      const currentVal = userNatAnswers[p.id] || "";
+                                      if (key === "CLEAR") {
+                                        setUserNatAnswers((prev) => ({ ...prev, [p.id]: "" }));
+                                      } else if (key === "BACK") {
+                                        setUserNatAnswers((prev) => ({ ...prev, [p.id]: currentVal.slice(0, -1) }));
+                                      } else if (key === "-") {
+                                        const nextVal = currentVal.startsWith("-") ? currentVal.slice(1) : "-" + currentVal;
+                                        setUserNatAnswers((prev) => ({ ...prev, [p.id]: nextVal }));
+                                      } else if (key === ".") {
+                                        if (!currentVal.includes(".")) {
+                                          setUserNatAnswers((prev) => ({ ...prev, [p.id]: currentVal + "." }));
+                                        }
+                                      } else {
+                                        setUserNatAnswers((prev) => ({ ...prev, [p.id]: currentVal + key }));
+                                      }
+                                    }}
+                                    className={`${isColSpan} py-2 rounded-lg border font-mono font-bold text-xs transition-all active:scale-95 ${
+                                      isSpecial
+                                        ? "bg-gray-200 dark:bg-[#38383a] border-gray-300 dark:border-gray-600 text-[#1d1d1f] dark:text-[#f5f5f7]"
+                                        : "bg-white dark:bg-[#1c1c1e] border-[#e5e5ea] dark:border-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-gray-50 dark:hover:bg-[#2c2c2e]"
+                                    }`}
+                                  >
+                                    {key === "BACK" ? "⌫" : key}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <input
+                                type="text"
+                                placeholder="Your NAT Answer"
+                                value={userNatAnswers[p.id] || ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setUserNatAnswers((prev) => ({ ...prev, [p.id]: val }));
+                                }}
+                                className="w-full px-3 py-1.5 text-xs font-mono font-bold rounded-lg border border-[#e5e5ea] dark:border-[#38383a] bg-white dark:bg-[#1c1c1e] text-[#1d1d1f] dark:text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setUserNatAnswers((prev) => ({ ...prev, [p.id]: "" }))}
+                                className="px-2.5 py-1.5 rounded-lg border border-[#e5e5ea] dark:border-[#38383a] text-[11px] font-semibold text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
+                              >
+                                Clear
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}

@@ -20,6 +20,7 @@ interface ExamHistoryListProps {
   onSelectExamReport: (exam: Exam) => void;
   onTakeNewExam: () => void;
   onDeleteExam: (examId: string) => void;
+  onRetakeExam?: (exam: Exam) => void;
 }
 
 export const ExamHistoryList: React.FC<ExamHistoryListProps> = ({
@@ -27,6 +28,7 @@ export const ExamHistoryList: React.FC<ExamHistoryListProps> = ({
   onSelectExamReport,
   onTakeNewExam,
   onDeleteExam,
+  onRetakeExam,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -192,6 +194,18 @@ export const ExamHistoryList: React.FC<ExamHistoryListProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {onRetakeExam && report?.questions && report.questions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => onRetakeExam(exam)}
+                        className="px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-xs font-bold transition-colors flex items-center gap-1.5"
+                        title="Retake this exam with the exact same questions and duration"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Retake Exam</span>
+                      </button>
+                    )}
+
                     {report && (
                       <button
                         type="button"
