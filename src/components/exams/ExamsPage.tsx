@@ -31,6 +31,7 @@ import {
   ExamReportData,
   QuestionType,
   ExamCompletionStatus,
+  PYQ,
 } from "../../types";
 import { Modal } from "../common/Modal";
 import {
@@ -557,7 +558,7 @@ export const ExamsPage: React.FC = () => {
           answer: String(q.correctAnswer || ""),
           explanation: q.explanation,
           difficulty: "medium",
-          status: "unsolved",
+          status: "unsolved" as any,
         } as PYQ;
       });
     } else {

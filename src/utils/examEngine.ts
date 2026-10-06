@@ -21,10 +21,19 @@ export function getQuestionType(q: PYQ): QuestionType {
   ) {
     return "nat";
   }
-  if (q.questionType) return q.questionType;
-  if (Array.isArray(q.correctOptions) && q.correctOptions.length > 1) {
+
+  // Detect MSQ if multiple options are present in correctOptions array, correctOption string, answer string, or explicitly specified
+  const isMultiple =
+    (Array.isArray(q.correctOptions) && q.correctOptions.length > 1) ||
+    (typeof q.correctOption === "string" && q.correctOption.includes(",")) ||
+    (typeof q.answer === "string" && (q.answer.includes(",") || q.answer.toLowerCase().includes("and")));
+
+  if (q.questionType === "msq" || isMultiple) {
     return "msq";
   }
+
+  if (q.questionType) return q.questionType;
+
   return "mcq";
 }
 
@@ -346,6 +355,12 @@ function getMsqCorrectIndices(q: PYQ): number[] {
     return q.correctOptions.map(parseOptionIndex).filter((i) => i >= 0);
   }
   if (q.correctOption !== undefined) {
+    if (typeof q.correctOption === "string") {
+      const matches = q.correctOption.toUpperCase().match(/[A-D]/g);
+      if (matches && matches.length > 0) {
+        return Array.from(new Set(matches.map(parseOptionIndex)));
+      }
+    }
     const idx = parseOptionIndex(q.correctOption);
     return idx >= 0 ? [idx] : [];
   }

@@ -25,15 +25,21 @@ import {
   ExternalLink,
   Hash,
 } from "lucide-react";
+
 import { useGate } from "../../context/GateContext";
+
 import { PYQ, PyqDifficulty, PyqStatus } from "../../types";
+
 import {
   DifficultyBadge,
   PyqStatusBadge,
   QuestionTypeBadge,
 } from "../common/Badge";
+
 import { Modal } from "../common/Modal";
+
 import { compressImageFile } from "../../utils/imageCompressor";
+
 import { PyqQueueView } from "./PyqQueueView";
 
 export const PyqPage: React.FC = () => {
@@ -384,6 +390,11 @@ export const PyqPage: React.FC = () => {
       marks: formMarks,
       isNat: formIsNat,
       isNumerical: formIsNat,
+      questionType: formIsNat
+        ? ("nat" as const)
+        : correctIndices.length > 1
+          ? ("msq" as const)
+          : ("mcq" as const),
       numericalAnswer: formIsNat ? finalAnswer : undefined,
       natAnswerRange: natRange,
       questionNumber: formQuestionNumber.trim(),

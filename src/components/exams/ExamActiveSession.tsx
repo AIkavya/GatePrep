@@ -194,9 +194,12 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
 
   const handleMsqToggle = (optionIndex: number) => {
     setUserAnswers((prev) => {
-      const currentList: number[] = Array.isArray(prev[currentQuestion.id])
-        ? prev[currentQuestion.id]
-        : [];
+      const raw = prev[currentQuestion.id];
+      const currentList: number[] = Array.isArray(raw)
+        ? raw
+        : typeof raw === "number"
+          ? [raw]
+          : [];
       if (currentList.includes(optionIndex)) {
         return {
           ...prev,
@@ -481,14 +484,24 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
               {/* Type B: MSQ (Multiple Select Checkbox Cards) */}
               {qType === "msq" && !currentQuestion?.isNat && !currentQuestion?.isNumerical && (
                 <div className="space-y-3">
-                  <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                    <span className="font-bold uppercase tracking-wider text-[10px] px-1.5 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 rounded">
-                      MSQ Rule
-                    </span>
-                    <span>
-                      One or more options may be correct. You must select all
-                      correct options with no extras.
-                    </span>
+                  <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold uppercase tracking-wider text-[10px] px-1.5 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 rounded">
+                        MSQ Rule
+                      </span>
+                      <span>
+                        One or more options may be correct. Select all correct options.
+                      </span>
+                    </div>
+                    {((Array.isArray(userAnswers[currentQuestion.id]) && (userAnswers[currentQuestion.id] as number[]).length > 0) || typeof userAnswers[currentQuestion.id] === "number") && (
+                      <button
+                        type="button"
+                        onClick={handleClearResponse}
+                        className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Clear Selection
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-2.5">
@@ -502,11 +515,12 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
                     ).map((optText, optIdx) => {
                       const optLetter =
                         ["A", "B", "C", "D"][optIdx] || `${optIdx + 1}`;
-                      const selectedList: number[] = Array.isArray(
-                        userAnswers[currentQuestion.id],
-                      )
-                        ? userAnswers[currentQuestion.id]
-                        : [];
+                      const raw = userAnswers[currentQuestion.id];
+                      const selectedList: number[] = Array.isArray(raw)
+                        ? raw
+                        : typeof raw === "number"
+                          ? [raw]
+                          : [];
                       const isSelected = selectedList.includes(optIdx);
 
                       return (
@@ -523,11 +537,11 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
                           <span
                             className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
                               isSelected
-                                ? "bg-amber-500 text-white"
+                                ? "bg-amber-500 text-white shadow-2xs"
                                 : "bg-gray-100 dark:bg-[#38383a] text-[#86868b] dark:text-[#a1a1a6]"
                             }`}
                           >
-                            {optLetter}
+                            {isSelected ? "✓" : optLetter}
                           </span>
                           <span className="text-sm font-medium pt-0.5 leading-normal flex-1">
                             {optText}
@@ -646,13 +660,30 @@ export const ExamActiveSession: React.FC<ExamActiveSessionProps> = ({
               </button>
 
               {/* Clear Response */}
-              <button
-                type="button"
-                onClick={handleClearResponse}
-                className="px-3 py-2 rounded-xl text-xs font-medium text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] hover:bg-gray-100 dark:hover:bg-[#2c2c2e] transition-colors"
-              >
-                Clear Response
-              </button>
+              {(() => {
+                const currentAnswer = userAnswers[currentQuestion.id];
+                const hasAnswer =
+                  currentAnswer !== undefined &&
+                  (Array.isArray(currentAnswer)
+                    ? currentAnswer.length > 0
+                    : currentAnswer !== "");
+
+                return (
+                  <button
+                    type="button"
+                    onClick={handleClearResponse}
+                    disabled={!hasAnswer}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                      hasAnswer
+                        ? "border border-rose-300 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 shadow-xs cursor-pointer"
+                        : "border border-transparent text-[#86868b] dark:text-[#a1a1a6] opacity-40 cursor-not-allowed"
+                    }`}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Clear Response</span>
+                  </button>
+                );
+              })()}
             </div>
 
             {/* Prev / Next buttons */}
